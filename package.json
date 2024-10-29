@@ -1,0 +1,22 @@
+{
+  "name": "quiz",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+  "build:css": "tailwindcss -i ./static/css/styles.css -o ./static/css/output.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "quiz"
+  },
+  "description": "",
+  "dependencies": {
+    "autoprefixer": "^10.4.20",
+    "daisyui": "^4.12.14",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14"
+  }
+}
