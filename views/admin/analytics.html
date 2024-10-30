@@ -1,0 +1,28 @@
+<!-- views/admin/analytics.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Tambahkan styling sesuai kebutuhan */
+        .stat {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #000;
+            display: inline-block;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    % include('partials/navbar.html')
+    <h2>Analytics</h2>
+
+    <div id="analyticsContainer">
+        <!-- Data akan diisi oleh JavaScript -->
+    </div>
+
+    <script src="/static/js/admin/analytics.js"></script>
+</body>
+</html>

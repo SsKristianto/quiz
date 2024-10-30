@@ -1,0 +1,54 @@
+<!-- views/admin/manage_users.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manajemen Pengguna</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    % include('partials/navbar.html')
+    <h2>Manajemen Pengguna</h2>
+    <button id="addUserBtn">Tambah Pengguna</button>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Peran</th>
+                <th>Dibuat Pada</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody">
+            <!-- Data akan diisi oleh JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Modal Tambah/Edit Pengguna -->
+    <div id="userModal" style="display:none;">
+        <form id="userForm">
+            <input type="hidden" name="user_id" id="user_id">
+            <label for="username">Username:</label>
+            <input type="text" name="username" id="username" required><br>
+
+            <label for="email">Email:</label>
+            <input type="email" name="email" id="email" required><br>
+
+            <label for="role">Peran:</label>
+            <select name="role" id="role">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select><br>
+
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password"><br>
+            <small>* Isi password jika Anda ingin mengubahnya.</small><br>
+
+            <button type="submit">Simpan</button>
+            <button type="button" id="cancelBtn">Batal</button>
+        </form>
+    </div>
+
+    <script src="/static/js/admin/user.js"></script>
+</body>
+</html>

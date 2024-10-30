@@ -1,0 +1,72 @@
+<!-- views/user/dashboard.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Pengguna</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Tambahkan styling sesuai kebutuhan */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        /* Styling untuk menu navigasi */
+        .nav-menu {
+            margin: 20px 0;
+        }
+        .nav-menu ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .nav-menu li {
+            display: inline;
+            margin-right: 15px;
+        }
+        .nav-menu a {
+            text-decoration: none;
+            color: #007BFF;
+        }
+        .nav-menu a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    % include('partials/navbar.html')
+    <h2>Dashboard Pengguna</h2>
+    <p>Selamat datang, {{session.get('username')}}!</p>
+    
+    <!-- Menu Navigasi Pengguna -->
+    <div class="nav-menu">
+        <ul>
+            <li><a href="/user/dashboard">Daftar Kuis</a></li>
+            <li><a href="/user/quiz-history">Riwayat Kuis</a></li>
+            <li><a href="/user/quiz-results">Hasil Kuis</a></li>
+        </ul>
+    </div>
+    
+    <h3>Daftar Kuis</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Judul</th>
+                <th>Deskripsi</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="quizTableBody">
+            <!-- Data akan diisi oleh JavaScript -->
+        </tbody>
+    </table>
+
+    <script src="/static/js/user/dashboard.js"></script>
+</body>
+</html>

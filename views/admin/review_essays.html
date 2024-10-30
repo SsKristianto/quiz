@@ -1,0 +1,80 @@
+<!-- views/admin/review_essays.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Review Jawaban Essay</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Tambahkan styling sesuai kebutuhan */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #000;
+            z-index: 1000;
+        }
+        .modal.show {
+            display: block;
+        }
+        #modalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
+        }
+        #modalOverlay.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    % include('partials/navbar.html')
+    <h2>Review Jawaban Essay</h2>
+
+    <!-- Tabel Jawaban Essay -->
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Pengguna</th>
+                <th>Kuis</th>
+                <th>Pertanyaan</th>
+                <th>Jawaban</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="essayAnswersTableBody">
+            <!-- Data akan diisi oleh JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Modal Review -->
+    <div id="modalOverlay"></div>
+    <div id="reviewModal" class="modal">
+        <h3>Review Jawaban Essay</h3>
+        <p><strong>Pengguna:</strong> <span id="modalUsername"></span></p>
+        <p><strong>Kuis:</strong> <span id="modalQuizTitle"></span></p>
+        <p><strong>Pertanyaan:</strong> <span id="modalQuestionText"></span></p>
+        <p><strong>Jawaban:</strong></p>
+        <p id="modalAnswerText"></p>
+        <form id="reviewForm">
+            <input type="hidden" name="answer_id" id="answer_id">
+            <label for="score">Skor:</label>
+            <input type="number" name="score" id="score" step="0.01" min="0" required><br>
+            <label for="feedback">Feedback:</label>
+            <textarea name="feedback" id="feedback"></textarea><br>
+            <button type="submit">Simpan</button>
+            <button type="button" id="cancelReviewBtn">Batal</button>
+        </form>
+    </div>
+
+    <script src="/static/js/admin/essays_reviews.js"></script>
+</body>
+</html>

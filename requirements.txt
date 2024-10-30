@@ -1,3 +1,7 @@
 bottle
 pymysql
 bottle-session
+bcrypt
+beaker
+cryptography
+pycryptodome

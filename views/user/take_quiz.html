@@ -1,0 +1,30 @@
+<!-- views/user/take_quiz.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mengerjakan Kuis</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Tambahkan styling sesuai kebutuhan */
+        .question {
+            margin-bottom: 20px;
+        }
+        .question p {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    % include('partials/navbar.html')
+    <h2>Mengerjakan Kuis</h2>
+    <form id="quizForm">
+        <input type="hidden" name="quiz_id" id="quiz_id" value="{{quiz_id}}">
+        <div id="questionsContainer">
+            <!-- Pertanyaan akan diisi oleh JavaScript -->
+        </div>
+        <button type="submit">Submit</button>
+    </form>
+
+    <script src="/static/js/user/take_quiz.js"></script>
+</body>
+</html>

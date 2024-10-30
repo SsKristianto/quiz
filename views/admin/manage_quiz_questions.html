@@ -1,0 +1,117 @@
+<!-- views/admin/manage_quiz_questions.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manajemen Kuis dan Pertanyaan</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Styling sederhana untuk modal */
+        #quizModal, #questionModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #000;
+            z-index: 1000;
+        }
+        #quizModal.hidden, #questionModal.hidden {
+            display: none;
+        }
+        /* Overlay untuk modal */
+        #modalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    % include('partials/navbar.html')
+    <h2>Manajemen Kuis dan Pertanyaan</h2>
+
+    <!-- Overlay untuk modal -->
+    <div id="modalOverlay"></div>
+
+    <!-- Bagian Manajemen Kuis -->
+    <h3>Kuis</h3>
+    <button id="addQuizBtn">Tambah Kuis</button>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Judul</th>
+                <th>Deskripsi</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="quizTableBody">
+            <!-- Data akan diisi oleh JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Modal Tambah/Edit Kuis -->
+    <div id="quizModal" class="hidden">
+        <form id="quizForm">
+            <input type="hidden" name="quiz_id" id="quiz_id">
+            <label for="title">Judul:</label>
+            <input type="text" name="title" id="title" required><br>
+
+            <label for="description">Deskripsi:</label>
+            <textarea name="description" id="description"></textarea><br>
+
+            <button type="submit">Simpan</button>
+            <button type="button" id="cancelQuizBtn">Batal</button>
+        </form>
+    </div>
+
+    <!-- Bagian Manajemen Pertanyaan -->
+    <h3>Pertanyaan</h3>
+    <button id="addQuestionBtn" disabled>Tambah Pertanyaan</button>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Pertanyaan</th>
+                <th>Tipe</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="questionTableBody">
+            <!-- Data akan diisi oleh JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Modal Tambah/Edit Pertanyaan -->
+    <div id="questionModal" class="hidden">
+        <form id="questionForm">
+            <input type="hidden" name="question_id" id="question_id">
+            <label for="question_text">Pertanyaan:</label>
+            <textarea name="question_text" id="question_text" required></textarea><br>
+
+            <label for="question_type">Tipe Pertanyaan:</label>
+            <select name="question_type" id="question_type" required>
+                <option value="multiple_choice">Pilihan Ganda</option>
+                <option value="essay">Essay</option>
+            </select><br>
+
+            <div id="optionsContainer" style="display:none;">
+                <h4>Opsi Jawaban:</h4>
+                <div id="optionsList">
+                    <!-- Opsi akan ditambahkan di sini -->
+                </div>
+                <button type="button" id="addOptionBtn">Tambah Opsi</button>
+            </div>
+
+            <button type="submit">Simpan</button>
+            <button type="button" id="cancelQuestionBtn">Batal</button>
+        </form>
+    </div>
+
+    <script src="/static/js/admin/quiz_questions.js"></script>
+</body>
+</html>

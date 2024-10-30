@@ -1,0 +1,42 @@
+<!-- views/user/history.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Riwayat Kuis</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Tambahkan styling sesuai kebutuhan */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    % include('partials/navbar.html')
+    <h2>Riwayat Kuis</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Judul Kuis</th>
+                <th>Deskripsi</th>
+                <th>Tanggal Dikerjakan</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="historyTableBody">
+            <!-- Data akan diisi oleh JavaScript -->
+        </tbody>
+    </table>
+
+    <script src="/static/js/user/history.js"></script>
+</body>
+</html>
