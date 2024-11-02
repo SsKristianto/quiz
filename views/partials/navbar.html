@@ -1,27 +1,13 @@
 <!-- views/partials/navbar.html -->
-<nav>
-    <ul>
-        <li><a href="/dashboard">Home</a></li>
-        <li><a href="/logout">Logout</a></li>
-    </ul>
+<nav class="navbar bg-base-100 shadow-md">
+    <div class="flex-1">
+        <a href="/" class="btn btn-ghost normal-case text-xl">Quiz App</a>
+    </div>
+    <div class="flex-none">
+        <ul class="menu menu-horizontal px-1">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <!-- Tambahkan link lain jika diperlukan -->
+            <li><a href="/logout">Logout</a></li>
+        </ul>
+    </div>
 </nav>
-<style>
-    nav ul {
-        list-style-type: none;
-        padding: 0;
-        background-color: #333;
-    }
-    nav li {
-        display: inline;
-        margin-right: 10px;
-    }
-    nav a {
-        color: white;
-        text-decoration: none;
-        padding: 14px 20px;
-        display: inline-block;
-    }
-    nav a:hover {
-        background-color: #111;
-    }
-</style>

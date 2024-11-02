@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.status === 'success') {
                 alert('Jawaban Anda telah disimpan.');
-                window.location.href = `/user/quiz-results/${quiz_id}`;
+                window.location.href = `/user/dashboard`;
             } else {
                 alert('Terjadi kesalahan: ' + data.message);
             }

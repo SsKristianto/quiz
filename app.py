@@ -489,7 +489,7 @@ def api_get_answers(quiz_id):
 
 # --- Review Jawaban Essay ---
 # Route untuk halaman review essay
-# Route untuk mereview jawaban essay
+# --- Review Jawaban Essay ---
 @app.route('/admin/review-essays')
 def admin_review_essays():
     session = request.environ.get('beaker.session')
@@ -497,7 +497,6 @@ def admin_review_essays():
         return redirect('/login')
     return template('admin/review_essays')
 
-# API untuk mendapatkan jawaban essay yang perlu direview
 @app.route('/api/admin/essay-reviews')
 def api_admin_get_essay_reviews():
     session = request.environ.get('beaker.session')
@@ -518,12 +517,11 @@ def api_admin_get_essay_reviews():
             JOIN users u ON a.user_id = u.user_id
             JOIN quizzes q ON a.quiz_id = q.quiz_id
             JOIN questions qs ON a.question_id = qs.question_id
-            WHERE qs.question_type = 'essay' 
+            WHERE LOWER(qs.question_type) = 'essay' 
               AND a.answer_id NOT IN (SELECT answer_id FROM essay_reviews)
             """
             cursor.execute(sql)
             essays = cursor.fetchall()
-            print(f"Fetched essays for review: {essays}")  # Debugging
         return {'essays': essays}
     except Exception as e:
         print(f"Error in api_admin_get_essay_reviews: {e}")
@@ -533,8 +531,6 @@ def api_admin_get_essay_reviews():
     finally:
         connection.close()
 
-
-# API untuk menyimpan review essay
 @app.route('/api/admin/review-essay', method='POST')
 def api_admin_review_essay():
     session = request.environ.get('beaker.session')
@@ -546,7 +542,7 @@ def api_admin_review_essay():
     score = request.forms.get('score')
     feedback = request.forms.get('feedback')
 
-    if not answer_id or not score:
+    if not answer_id or score is None:
         abort(400, "Missing required fields.")
 
     # Validasi input
@@ -558,9 +554,6 @@ def api_admin_review_essay():
     except ValueError:
         abort(400, "Invalid input for answer_id or score.")
 
-    # Normalize essay score to be between 0 and 1
-    normalized_essay_score = (score / 100) * 1  # Mengasumsikan setiap pertanyaan essay bernilai 1 poin
-
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -569,78 +562,65 @@ def api_admin_review_essay():
             INSERT INTO essay_reviews (answer_id, reviewed_by, score, feedback)
             VALUES (%s, %s, %s, %s)
             """
-            cursor.execute(sql, (answer_id, reviewed_by, normalized_essay_score, feedback))
+            cursor.execute(sql, (answer_id, reviewed_by, score, feedback))
 
-            # Update skor di tabel history berdasarkan answer_id
+            # Dapatkan history_id dan quiz_id dari answer_id
             sql = """
-            SELECT quiz_id, user_id, history_id FROM answers WHERE answer_id = %s
+            SELECT history_id, quiz_id FROM answers WHERE answer_id = %s
             """
             cursor.execute(sql, (answer_id,))
             answer = cursor.fetchone()
             if not answer:
                 abort(404, "Answer not found.")
 
-            quiz_id = answer['quiz_id']
-            user_id = answer['user_id']
             history_id = answer['history_id']
+            quiz_id = answer['quiz_id']
 
-            # Dapatkan total pertanyaan
+            # Dapatkan mc_score dari tabel history
             sql = """
-            SELECT COUNT(*) AS total_questions FROM questions WHERE quiz_id = %s
+            SELECT mc_score FROM history WHERE history_id = %s
+            """
+            cursor.execute(sql, (history_id,))
+            history = cursor.fetchone()
+            if not history:
+                abort(404, "History not found.")
+
+            mc_score = float(history['mc_score'])  # Skor pilihan ganda tetap
+
+            # Dapatkan total pertanyaan essay
+            sql = """
+            SELECT COUNT(*) AS total_essay_questions FROM questions WHERE quiz_id = %s AND question_type = 'essay'
             """
             cursor.execute(sql, (quiz_id,))
             result = cursor.fetchone()
-            total_questions = result['total_questions']
+            total_essay_questions = result['total_essay_questions'] if result else 0
 
-            # Hitung jumlah jawaban multiple choice yang benar
+            # Dapatkan total skor essay yang sudah dinilai
             sql = """
-            SELECT COUNT(*) AS correct_mc_answers
-            FROM (
-                SELECT a.answer_id
-                FROM answers a
-                JOIN questions q ON a.question_id = q.question_id
-                LEFT JOIN (
-                    SELECT ao.answer_id, GROUP_CONCAT(ao.option_id ORDER BY ao.option_id) AS selected_option_ids
-                    FROM answer_options ao
-                    GROUP BY ao.answer_id
-                ) AS uao ON a.answer_id = uao.answer_id
-                LEFT JOIN (
-                    SELECT o.question_id, GROUP_CONCAT(o.option_id ORDER BY o.option_id) AS correct_option_ids
-                    FROM options o
-                    WHERE o.is_correct = 1
-                    GROUP BY o.question_id
-                ) AS co ON a.question_id = co.question_id
-                WHERE a.history_id = %s AND q.question_type = 'multiple_choice'
-                AND uao.selected_option_ids = co.correct_option_ids
-            ) AS correct_answers
-            """
-            cursor.execute(sql, (history_id,))
-            result = cursor.fetchone()
-            correct_mc_answers = result['correct_mc_answers'] if result else 0
-
-            # Hitung total skor essay
-            sql = """
-            SELECT SUM(er.score) AS total_essay_score
-            FROM answers a
-            JOIN essay_reviews er ON a.answer_id = er.answer_id
+            SELECT AVG(score) AS average_essay_score
+            FROM essay_reviews er
+            JOIN answers a ON er.answer_id = a.answer_id
             WHERE a.history_id = %s
             """
             cursor.execute(sql, (history_id,))
             result = cursor.fetchone()
-            total_essay_score = float(result['total_essay_score']) if result['total_essay_score'] else 0.0
+            essay_score = float(result['average_essay_score']) if result['average_essay_score'] else 0.0
 
-            # Hitung total poin yang diperoleh
-            total_points_earned = correct_mc_answers + total_essay_score
-            total_possible_points = total_questions  # Mengasumsikan setiap pertanyaan bernilai 1 poin
+            # Perbarui essay_score di tabel history
+            sql = """
+            UPDATE history SET essay_score = %s WHERE history_id = %s
+            """
+            cursor.execute(sql, (essay_score, history_id))
 
-            # Hitung skor baru sebagai persentase
-            new_score = (total_points_earned / total_possible_points) * 100 if total_possible_points > 0 else 0
+            # Hitung skor total dengan bobot
+            # Misalkan bobot pilihan ganda 50% dan essay 50%
+            total_score = (mc_score * 0.5) + (essay_score * 0.5)
 
-            # Update skor di tabel history
+            # Update skor total di tabel history
             sql = """
             UPDATE history SET score = %s WHERE history_id = %s
             """
-            cursor.execute(sql, (new_score, history_id))
+            cursor.execute(sql, (total_score, history_id))
 
         connection.commit()
         return {'status': 'success'}
@@ -791,57 +771,10 @@ def api_user_submit_quiz():
             # Mulai transaksi
             connection.begin()
 
-            # Insert ke tabel history dengan skor awal 0
-            sql = """
-            INSERT INTO history (user_id, quiz_id, score, started_at, finished_at)
-            VALUES (%s, %s, %s, NOW(), NOW())
-            """
-            cursor.execute(sql, (user_id, quiz_id, 0))
-            history_id = cursor.lastrowid  # ID dari entry history yang baru dibuat
-
-            answer_ids = []
-            for ans in answers:
-                question_id = int(ans['question_id'])  # Konversi ke integer
-                question_type = ans['question_type']
-                if question_type == 'multiple_choice':
-                    # Simpan jawaban ke tabel answers
-                    sql = """
-                    INSERT INTO answers (user_id, quiz_id, question_id, history_id)
-                    VALUES (%s, %s, %s, %s)
-                    """
-                    cursor.execute(sql, (user_id, quiz_id, question_id, history_id))
-                    answer_id = cursor.lastrowid
-                    selected_options = ans.get('selected_options', [])
-                    # Pastikan selected_options adalah list of integers
-                    selected_options = [int(opt_id) for opt_id in selected_options]
-                    answer_ids.append({
-                        'question_id': question_id,
-                        'question_type': question_type,
-                        'answer_id': answer_id,
-                        'selected_options': selected_options
-                    })
-                    # Simpan opsi yang dipilih ke tabel answer_options
-                    for option_id in selected_options:
-                        sql = """
-                        INSERT INTO answer_options (answer_id, option_id)
-                        VALUES (%s, %s)
-                        """
-                        cursor.execute(sql, (answer_id, option_id))
-                elif question_type == 'essay':
-                    # Simpan jawaban essay
-                    answer_text = ans.get('answer_text', '')
-                    sql = """
-                    INSERT INTO answers (user_id, quiz_id, question_id, answer_text, history_id)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """
-                    cursor.execute(sql, (user_id, quiz_id, question_id, answer_text, history_id))
-                    answer_id = cursor.lastrowid
-                    answer_ids.append({
-                        'question_id': question_id,
-                        'question_type': question_type,
-                        'answer_id': answer_id,
-                        'answer_text': answer_text
-                    })
+            # Hitung skor pilihan ganda terlebih dahulu
+            total_mc_questions = 0
+            total_mc_correct = 0
+            total_essay_questions = 0
 
             # Dapatkan semua pertanyaan dan jenisnya
             sql = """
@@ -871,36 +804,82 @@ def api_user_submit_quiz():
                 correct_option_ids = [int(opt_id) for opt_id in co['correct_option_ids'].split(',')]
                 correct_options_dict[qid] = correct_option_ids
 
-            # Inisialisasi total poin yang diperoleh
-            total_points_earned = 0
-            total_possible_points = total_questions  # Mengasumsikan setiap pertanyaan bernilai 1 poin
-
             # Proses jawaban dan hitung skor
-            for ans in answer_ids:
-                qid = int(ans['question_id'])
-                if ans['question_type'] == 'multiple_choice':
-                    selected_option_ids = ans['selected_options']
+            for ans in answers:
+                question_id = int(ans['question_id'])
+                question_type = ans['question_type']
+                if question_type == 'multiple_choice':
+                    total_mc_questions += 1
+                    selected_option_ids = [int(opt_id) for opt_id in ans.get('selected_options', [])]
                     selected_option_ids_set = set(selected_option_ids)
-                    correct_option_ids = correct_options_dict.get(qid, [])
+                    correct_option_ids = correct_options_dict.get(question_id, [])
                     correct_option_ids_set = set(correct_option_ids)
                     if selected_option_ids_set == correct_option_ids_set:
-                        total_points_earned += 1  # Tambahkan 1 poin untuk jawaban benar
-                elif ans['question_type'] == 'essay':
+                        total_mc_correct += 1  # Tambahkan 1 poin untuk jawaban benar
+                elif question_type == 'essay':
+                    total_essay_questions += 1
                     # Jawaban essay akan dinilai nanti
-                    pass
 
-            # Hitung skor awal (tanpa skor essay)
-            score = (total_points_earned / total_possible_points) * 100 if total_possible_points > 0 else 0
+            # Hitung skor pilihan ganda
+            if total_mc_questions > 0:
+                mc_score = (total_mc_correct / total_mc_questions) * 100
+            else:
+                mc_score = 0
 
-            # Update skor di tabel history
+            # Skor essay akan ditambahkan setelah dinilai oleh admin
+            essay_score = 0  # Inisialisasi skor essay menjadi 0
+
+            # Skor total awal adalah skor pilihan ganda saja
+            total_score = mc_score  # Nanti akan ditambahkan dengan skor essay setelah dinilai
+
+            # Insert ke tabel history dengan mc_score dan essay_score
             sql = """
-            UPDATE history SET score = %s, finished_at = NOW() WHERE history_id = %s
+            INSERT INTO history (user_id, quiz_id, mc_score, essay_score, score, started_at, finished_at)
+            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
             """
-            cursor.execute(sql, (score, history_id))
+            cursor.execute(sql, (user_id, quiz_id, mc_score, essay_score, total_score))
+            history_id = cursor.lastrowid  # ID dari entry history yang baru dibuat
+
+            # Simpan jawaban ke tabel answers
+            for ans in answers:
+                question_id = int(ans['question_id'])
+                question_type = ans['question_type']
+                if question_type == 'multiple_choice':
+                    sql = """
+                    INSERT INTO answers (user_id, quiz_id, question_id, history_id)
+                    VALUES (%s, %s, %s, %s)
+                    """
+                    cursor.execute(sql, (user_id, quiz_id, question_id, history_id))
+                    answer_id = cursor.lastrowid
+                    selected_options = [int(opt_id) for opt_id in ans.get('selected_options', [])]
+                    # Simpan opsi yang dipilih ke tabel answer_options
+                    for option_id in selected_options:
+                        sql = """
+                        INSERT INTO answer_options (answer_id, option_id)
+                        VALUES (%s, %s)
+                        """
+                        cursor.execute(sql, (answer_id, option_id))
+                elif question_type == 'essay':
+                    answer_text = ans.get('answer_text', '')
+                    sql = """
+                    INSERT INTO answers (user_id, quiz_id, question_id, answer_text, history_id)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """
+                    cursor.execute(sql, (user_id, quiz_id, question_id, answer_text, history_id))
+                    answer_id = cursor.lastrowid
+                    # Tidak perlu menyimpan ke answer_options untuk essay
 
             # Commit transaksi
             connection.commit()
-            return {'status': 'success', 'score': score, 'history_id': history_id}  # Tambahkan 'history_id' di sini
+
+            # Kembalikan skor pilihan ganda dan informasi lainnya
+            return {
+                'status': 'success',
+                'mc_score': mc_score,
+                'essay_score': essay_score,
+                'total_score': total_score,
+                'history_id': history_id
+            }
 
     except Exception as e:
         print(f"Error in api_user_submit_quiz: {e}")
@@ -911,6 +890,7 @@ def api_user_submit_quiz():
         return {'status': 'error', 'message': 'Internal Server Error'}
     finally:
         connection.close()
+
 
 # Route untuk melihat hasil kuis
 @app.route('/user/quiz-results/<quiz_id:int>/<history_id:int>')
@@ -931,17 +911,18 @@ def api_user_get_quiz_results(quiz_id, history_id):
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            # Dapatkan entri history spesifik berdasarkan history_id
+            # Dapatkan skor dari tabel history
             sql = """
-            SELECT history_id, score FROM history
-            WHERE user_id = %s AND quiz_id = %s AND history_id = %s
+            SELECT mc_score, essay_score, score AS total_score FROM history WHERE history_id = %s AND user_id = %s
             """
-            cursor.execute(sql, (user_id, quiz_id, history_id))
+            cursor.execute(sql, (history_id, user_id))
             history = cursor.fetchone()
             if not history:
-                abort(404, "Quiz attempt not found.")
+                abort(404, "History not found.")
 
-            score = float(history['score']) if history['score'] is not None else 0.0
+            mc_score = float(history['mc_score'])
+            essay_score = float(history['essay_score'])
+            total_score = float(history['total_score'])
 
             # Dapatkan jawaban pengguna untuk history_id tersebut
             sql = """
@@ -987,15 +968,17 @@ def api_user_get_quiz_results(quiz_id, history_id):
             essay_reviews_dict = {}
             for er in essay_reviews:
                 question_id = str(er['question_id'])
-                essay_score = float(er['essay_score']) if er['essay_score'] is not None else 0.0
+                essay_score_value = float(er['essay_score']) if er['essay_score'] is not None else 0.0
                 feedback = er['feedback']
-                essay_reviews_dict[question_id] = {'score': essay_score, 'feedback': feedback}
+                essay_reviews_dict[question_id] = {'score': essay_score_value, 'feedback': feedback}
 
             return {
                 'user_answers': user_answers,
-                'score': score,
+                'mc_score': mc_score,
+                'essay_score': essay_score,
+                'total_score': total_score,
                 'essay_reviews': essay_reviews_dict,
-                'correct_options': correct_options_dict  # Tambahkan ini
+                'correct_options': correct_options_dict
             }
     except Exception as e:
         print(f"Error in api_user_get_quiz_results: {e}")
@@ -1012,7 +995,7 @@ def user_quiz_history():
     session = request.environ.get('beaker.session')
     if 'user_id' not in session:
         return redirect('/login')
-    return template('user/history')
+    return template('user/dashboard')
 
 # API untuk mendapatkan riwayat kuis pengguna
 @app.route('/api/user/quiz-history')

@@ -1,13 +1,13 @@
 // static/js/user/results.js
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Mendapatkan quiz_id dari URL
-    var quiz_id = window.location.pathname.split('/').pop();
-    var scoreElement = document.getElementById('score');
-    var resultsContainer = document.getElementById('resultsContainer');
+    // Mendapatkan quizId dan historyId dari URL
+    const urlParts = window.location.pathname.split('/');
+    const quizId = urlParts[3];
+    const historyId = urlParts[4];
 
     function loadResults() {
-        fetch(`/api/user/quiz-results/${quiz_id}`)
+        fetch(`/api/user/quiz-results/${quizId}/${historyId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -15,8 +15,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                scoreElement.textContent = data.score.toFixed(2);
+                document.getElementById('mc_score').textContent = data.mc_score.toFixed(2);
+                document.getElementById('essay_score').textContent = data.essay_score.toFixed(2);
+                document.getElementById('total_score').textContent = data.total_score.toFixed(2);
 
+                // Render hasil kuis
+                const resultsContainer = document.getElementById('resultsContainer');
                 if (!data.user_answers || data.user_answers.length === 0) {
                     resultsContainer.innerHTML = '<p>Tidak ada jawaban yang ditemukan.</p>';
                     return;
@@ -31,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (answer.question_type === 'multiple_choice') {
                         var selectedOptionIds = answer.selected_option_ids ? answer.selected_option_ids.split(',') : [];
                         var correctOptionIds = data.correct_options ? data.correct_options[answer.question_id.toString()] : [];
-                        
+
                         // Konversi ID ke number untuk perbandingan yang tepat
                         selectedOptionIds = selectedOptionIds.map(Number);
                         correctOptionIds = correctOptionIds.map(Number);
@@ -47,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Tampilkan skor dan feedback jika tersedia
                         if (data.essay_reviews && data.essay_reviews[answer.question_id.toString()]) {
                             var review = data.essay_reviews[answer.question_id.toString()];
-                            resultDiv.innerHTML += `<p>Skor: ${review.score}</p>`;
+                            resultDiv.innerHTML += `<p>Skor: ${review.score.toFixed(2)}</p>`;
                             resultDiv.innerHTML += `<p>Feedback: ${review.feedback}</p>`;
                         } else {
                             resultDiv.innerHTML += `<p>Status: Belum direview</p>`;
@@ -59,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching quiz results:', error);
+                const resultsContainer = document.getElementById('resultsContainer');
                 resultsContainer.innerHTML = '<p>Terjadi kesalahan saat memuat hasil kuis.</p>';
             });
     }

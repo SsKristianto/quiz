@@ -1,139 +1,85 @@
-// static/js/admin/essays_reviews.js
+// static/js/admin/essay_reviews.js
 
 document.addEventListener('DOMContentLoaded', function() {
-    var essayAnswersTableBody = document.getElementById('essayAnswersTableBody');
-    var modalOverlay = document.getElementById('modalOverlay');
-    var reviewModal = document.getElementById('reviewModal');
-    var modalUsername = document.getElementById('modalUsername');
-    var modalQuizTitle = document.getElementById('modalQuizTitle');
-    var modalQuestionText = document.getElementById('modalQuestionText');
-    var modalAnswerText = document.getElementById('modalAnswerText');
-    var reviewForm = document.getElementById('reviewForm');
-    var cancelReviewBtn = document.getElementById('cancelReviewBtn');
+    const essaysContainer = document.getElementById('essaysContainer');
 
-    var currentAnswerId = null;
-
-    // Fetch and display essay answers
-    function loadEssayAnswers() {
-        fetch('/api/admin/essay-reviews')  // Pastikan endpoint ini benar
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+    function loadEssays() {
+        fetch('/api/admin/essay-reviews')
+            .then(response => response.json())
             .then(data => {
-                console.log('Fetched essays:', data.essays);  // Untuk debugging
-                essayAnswersTableBody.innerHTML = '';
+                essaysContainer.innerHTML = '';
                 if (!data.essays || data.essays.length === 0) {
-                    essayAnswersTableBody.innerHTML = '<tr><td colspan="5">Tidak ada jawaban essay yang perlu direview.</td></tr>';
+                    essaysContainer.innerHTML = '<p>Tidak ada jawaban essay yang perlu direview.</p>';
                     return;
                 }
-                data.essays.forEach(answer => {
-                    var row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${answer.username}</td>
-                        <td>${answer.quiz_title}</td>
-                        <td>${answer.question_text}</td>
-                        <td>${answer.answer_text}</td>
-                        <td>
-                            <button class="reviewBtn" data-id="${answer.answer_id}">Review</button>
-                        </td>
+
+                data.essays.forEach(essay => {
+                    const essayDiv = document.createElement('div');
+                    essayDiv.classList.add('essay-item');
+                    essayDiv.innerHTML = `
+                        <h3>Kuis: ${essay.quiz_title}</h3>
+                        <p><strong>Pengguna:</strong> ${essay.username}</p>
+                        <p><strong>Pertanyaan:</strong> ${essay.question_text}</p>
+                        <p><strong>Jawaban:</strong> ${essay.answer_text}</p>
+                        <div class="feedback">
+                            <label>Skor (0-100):</label>
+                            <input type="number" min="0" max="100" step="0.01" id="score_${essay.answer_id}">
+                            <br>
+                            <label>Feedback:</label>
+                            <textarea id="feedback_${essay.answer_id}"></textarea>
+                            <br>
+                            <button onclick="submitReview(${essay.answer_id})">Simpan Review</button>
+                        </div>
                     `;
-                    essayAnswersTableBody.appendChild(row);
+                    essaysContainer.appendChild(essayDiv);
                 });
-                attachEventListeners();
             })
             .catch(error => {
-                console.error('Error fetching essay answers:', error);
-                essayAnswersTableBody.innerHTML = '<tr><td colspan="5">Terjadi kesalahan saat memuat data.</td></tr>';
+                console.error('Error fetching essay reviews:', error);
+                essaysContainer.innerHTML = '<p>Terjadi kesalahan saat memuat jawaban essay.</p>';
             });
     }
 
-    function attachEventListeners() {
-        document.querySelectorAll('.reviewBtn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                var answerId = this.getAttribute('data-id');
-                openReviewModal(answerId);
-            });
-        });
-    }
+    window.submitReview = function(answer_id) {
+        const scoreInput = document.getElementById(`score_${answer_id}`);
+        const feedbackInput = document.getElementById(`feedback_${answer_id}`);
 
-    function openReviewModal(answerId) {
-        currentAnswerId = answerId;
-        // Fetch data for the specific answer
-        fetch('/api/admin/essay-reviews')  // Pastikan endpoint ini benar
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                var answer = data.essays.find(a => a.answer_id == answerId);
-                if (answer) {
-                    modalUsername.textContent = answer.username;
-                    modalQuizTitle.textContent = answer.quiz_title;
-                    modalQuestionText.textContent = answer.question_text;
-                    modalAnswerText.textContent = answer.answer_text;
-                    document.getElementById('answer_id').value = answer.answer_id;
-                    reviewForm.reset();
-                    showModal();
-                } else {
-                    alert('Jawaban tidak ditemukan.');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching answer data:', error);
-                alert('Terjadi kesalahan saat memuat data jawaban.');
-            });
-    }
+        const score = parseFloat(scoreInput.value);
+        const feedback = feedbackInput.value;
 
-    function showModal() {
-        reviewModal.classList.add('show');
-        modalOverlay.classList.add('show');
-    }
+        if (isNaN(score) || score < 0 || score > 100) {
+            alert('Skor harus berupa angka antara 0 hingga 100.');
+            return;
+        }
 
-    function hideModal() {
-        reviewModal.classList.remove('show');
-        modalOverlay.classList.remove('show');
-    }
+        const payload = {
+            answer_id: answer_id,
+            score: score,
+            feedback: feedback
+        };
 
-    // Submit review form
-    reviewForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-        var formData = new FormData(reviewForm);
-
-        fetch('/api/admin/review-essay', {  // Pastikan endpoint ini benar
+        fetch('/api/admin/review-essay', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(payload)
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
                 alert('Review berhasil disimpan.');
-                hideModal();
-                loadEssayAnswers();
+                loadEssays(); // Muat ulang daftar essay
             } else {
                 alert('Terjadi kesalahan: ' + data.message);
             }
         })
         .catch(error => {
-            console.error('Error saving review:', error);
+            console.error('Error submitting essay review:', error);
             alert('Terjadi kesalahan saat menyimpan review.');
         });
-    });
-
-    // Cancel review
-    cancelReviewBtn.addEventListener('click', function() {
-        hideModal();
-    });
+    };
 
     // Initial load
-    loadEssayAnswers();
+    loadEssays();
 });
