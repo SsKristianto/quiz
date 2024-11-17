@@ -74,7 +74,6 @@ def register():
         return template('auth/register', error=None)
 
 # Route untuk login
-# Route for login
 @app.route('/login', method=['GET', 'POST'])
 def login():
     session = request.environ.get('beaker.session')
@@ -91,7 +90,7 @@ def login():
                 if user and bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
                     session['user_id'] = user['user_id']
                     session['role'] = user['role']
-                    session['username'] = user['username']  # Add this line
+                    session['username'] = user['username']  # Pastikan ini ada
                     session.save()
                     return redirect('/dashboard')
                 else:
@@ -130,8 +129,8 @@ def user_dashboard():
     session = request.environ.get('beaker.session')
     if 'user_id' not in session:
         return redirect('/login')
-    return template('user/dashboard', session=session)
-
+    username = session.get('username', 'Pengguna')
+    return template('user/dashboard', username=username)
 
 # Route untuk logout
 @app.route('/logout')
@@ -140,6 +139,7 @@ def logout():
     session.delete()
     return redirect('/login')
 
+# --- Manajemen Pengguna ---
 # Route untuk halaman manajemen pengguna
 @app.route('/admin/users')
 def admin_manage_users():
@@ -149,10 +149,78 @@ def admin_manage_users():
 
     return template('admin/manage_users')
 
-# --- Manajemen Pengguna ---
-# API untuk mendapatkan daftar pengguna
+# API untuk mendapatkan daftar pengguna dengan pagination dan search/filter
 @app.route('/api/admin/users')
 def api_get_users():
+    session = request.environ.get('beaker.session')
+    if 'user_id' not in session or not is_admin(session):
+        abort(403, "Unauthorized access.")
+
+    try:
+        page = int(request.query.get('page', 1))
+        limit = int(request.query.get('limit', 10))
+        query = request.query.get('query', '').strip()
+        role = request.query.get('role', '').strip()
+
+        print(f"Received parameters - page: {page}, limit: {limit}, query: '{query}', role: '{role}'")
+
+        offset = (page - 1) * limit
+
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = "SELECT user_id, username, email, role, created_at FROM users WHERE 1=1"
+            params = []
+
+            if query:
+                sql += " AND (username LIKE %s OR email LIKE %s)"
+                params.extend([f"%{query}%", f"%{query}%"])
+
+            if role:
+                sql += " AND LOWER(role) = LOWER(%s)"
+                params.append(role)
+
+            sql += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
+            params.extend([limit, offset])
+
+            print(f"Executing SQL: {sql} with params {params}")
+
+            cursor.execute(sql, params)
+            users = cursor.fetchall()
+
+            # Hitung total pengguna untuk pagination
+            count_sql = "SELECT COUNT(*) as total FROM users WHERE 1=1"
+            count_params = []
+
+            if query:
+                count_sql += " AND (username LIKE %s OR email LIKE %s)"
+                count_params.extend([f"%{query}%", f"%{query}%"])
+
+            if role:
+                count_sql += " AND LOWER(role) = LOWER(%s)"
+                count_params.append(role)
+
+            print(f"Executing Count SQL: {count_sql} with params {count_params}")
+
+            cursor.execute(count_sql, count_params)
+            total = cursor.fetchone()['total']
+
+            # Konversi 'created_at' ke string
+            for user in users:
+                if isinstance(user['created_at'], datetime.datetime):
+                    user['created_at'] = user['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+
+            print(f"Returning {len(users)} users out of {total} total users")
+
+            return {'users': users, 'total': total}
+    except Exception as e:
+        print(f"Error in api_get_users: {e}")
+        abort(500, "Internal Server Error")
+    finally:
+        connection.close()
+
+# API untuk mendapatkan detail satu pengguna
+@app.route('/api/admin/users/<user_id:int>')
+def api_get_user(user_id):
     session = request.environ.get('beaker.session')
     if 'user_id' not in session or not is_admin(session):
         abort(403, "Unauthorized access.")
@@ -160,23 +228,21 @@ def api_get_users():
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT user_id, username, email, role, created_at FROM users"
-            cursor.execute(sql)
-            users = cursor.fetchall()
-        
-        # Konversi 'created_at' ke string
-        for user in users:
+            sql = "SELECT user_id, username, email, role, created_at FROM users WHERE user_id = %s"
+            cursor.execute(sql, (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                abort(404, "User not found.")
+
             if isinstance(user['created_at'], datetime.datetime):
                 user['created_at'] = user['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        return {'users': users}
+
+            return user
     except Exception as e:
-        # Tambahkan logging atau print untuk debugging
-        print(f"Error in api_get_users: {e}")
+        print(f"Error in api_get_user: {e}")
         abort(500, "Internal Server Error")
     finally:
         connection.close()
-
 
 # API untuk menambah pengguna baru
 @app.route('/api/admin/users', method='POST')
@@ -190,7 +256,7 @@ def api_add_user():
     password = request.forms.get('password')
     role = request.forms.get('role')
 
-    if not username or not email or not role:
+    if not username or not email or not role or not password:
         abort(400, "Missing required fields.")
 
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -201,6 +267,7 @@ def api_add_user():
             sql = "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, %s)"
             cursor.execute(sql, (username, email, hashed_password, role))
         connection.commit()
+        response.status = 201
         return {'status': 'success'}
     except pymysql.err.IntegrityError:
         response.status = 400
@@ -272,7 +339,6 @@ def api_delete_user(user_id):
 # --- Manajemen Pengguna ---
 
 # --- Manajemen Quiz dan Pertanyaan ---
-
 # Route untuk halaman manajemen kuis dan pertanyaan
 @app.route('/admin/quiz-questions')
 def admin_manage_quiz_questions():
@@ -646,7 +712,6 @@ def admin_analytics():
         return redirect('/login')
     return template('admin/analytics')
 
-# API untuk mendapatkan data statistik
 @app.route('/api/admin/analytics')
 def api_get_analytics():
     session = request.environ.get('beaker.session')
@@ -657,47 +722,181 @@ def api_get_analytics():
     try:
         analytics_data = {}
         with connection.cursor() as cursor:
-            # Jumlah kuis
+            # Total Kuis
             sql = "SELECT COUNT(*) AS total_quizzes FROM quizzes"
             cursor.execute(sql)
             result = cursor.fetchone()
             analytics_data['total_quizzes'] = result['total_quizzes']
 
-            # Jumlah pengguna aktif (yang pernah mengikuti kuis)
-            sql = "SELECT COUNT(DISTINCT user_id) AS active_users FROM answers"
+            # Perubahan jumlah kuis dibanding bulan lalu
+            sql_current = "SELECT COUNT(*) FROM quizzes WHERE MONTH(created_at) = MONTH(CURRENT_DATE())"
+            sql_previous = "SELECT COUNT(*) FROM quizzes WHERE MONTH(created_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
+            cursor.execute(sql_current)
+            current_quizzes = cursor.fetchone()['COUNT(*)']
+            cursor.execute(sql_previous)
+            previous_quizzes = cursor.fetchone()['COUNT(*)']
+            analytics_data['quizzes_change'] = calculate_percentage_change(current_quizzes, previous_quizzes)
+
+            # Pengguna Aktif
+            sql = "SELECT COUNT(DISTINCT user_id) AS active_users FROM answers WHERE MONTH(submitted_at) = MONTH(CURRENT_DATE())"
             cursor.execute(sql)
             result = cursor.fetchone()
             analytics_data['active_users'] = result['active_users']
 
-            # Skor rata-rata
+            # Perubahan jumlah pengguna aktif dibanding bulan lalu
+            sql_current = "SELECT COUNT(DISTINCT user_id) FROM answers WHERE MONTH(submitted_at) = MONTH(CURRENT_DATE())"
+            sql_previous = "SELECT COUNT(DISTINCT user_id) FROM answers WHERE MONTH(submitted_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
+            cursor.execute(sql_current)
+            current_users = cursor.fetchone()['COUNT(DISTINCT user_id)']
+            cursor.execute(sql_previous)
+            previous_users = cursor.fetchone()['COUNT(DISTINCT user_id)']
+            analytics_data['users_change'] = calculate_percentage_change(current_users, previous_users)
+
+            # Skor Rata-rata
             sql = "SELECT AVG(score) AS average_score FROM history WHERE score IS NOT NULL"
             cursor.execute(sql)
             result = cursor.fetchone()
             analytics_data['average_score'] = float(result['average_score']) if result['average_score'] else 0
 
-            # Total pertanyaan
+            # Perubahan skor rata-rata dibanding bulan lalu
+            sql_current = "SELECT AVG(score) FROM history WHERE score IS NOT NULL AND MONTH(finished_at) = MONTH(CURRENT_DATE())"
+            sql_previous = "SELECT AVG(score) FROM history WHERE score IS NOT NULL AND MONTH(finished_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
+            cursor.execute(sql_current)
+            current_avg_score = cursor.fetchone()['AVG(score)'] or 0
+            cursor.execute(sql_previous)
+            previous_avg_score = cursor.fetchone()['AVG(score)'] or 0
+            analytics_data['score_change'] = calculate_percentage_change(current_avg_score, previous_avg_score)
+
+            # Total Pertanyaan
             sql = "SELECT COUNT(*) AS total_questions FROM questions"
             cursor.execute(sql)
             result = cursor.fetchone()
             analytics_data['total_questions'] = result['total_questions']
 
+            # Perubahan total pertanyaan dibanding bulan lalu
+            sql_current = "SELECT COUNT(*) FROM questions WHERE MONTH(created_at) = MONTH(CURRENT_DATE())"
+            sql_previous = "SELECT COUNT(*) FROM questions WHERE MONTH(created_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
+            cursor.execute(sql_current)
+            current_questions = cursor.fetchone()['COUNT(*)']
+            cursor.execute(sql_previous)
+            previous_questions = cursor.fetchone()['COUNT(*)']
+            analytics_data['questions_change'] = calculate_percentage_change(current_questions, previous_questions)
+
             # Total jawaban essay yang belum direview
             sql = """
-            SELECT COUNT(*) AS pending_essays
-            FROM answers a
-            JOIN questions q ON a.question_id = q.question_id
-            LEFT JOIN essay_reviews er ON a.answer_id = er.answer_id
-            WHERE q.question_type = 'essay' AND er.review_id IS NULL
+                SELECT COUNT(*) AS pending_essays
+                FROM answers a
+                JOIN questions q ON a.question_id = q.question_id
+                LEFT JOIN essay_reviews er ON a.answer_id = er.answer_id
+                WHERE q.question_type = 'essay' AND er.review_id IS NULL
             """
             cursor.execute(sql)
             result = cursor.fetchone()
             analytics_data['pending_essays'] = result['pending_essays']
 
-        return {'analytics': analytics_data}
+            return {'analytics': analytics_data}
     finally:
         connection.close()
 
-# --- Analytics ---
+def calculate_percentage_change(current, previous):
+    if previous == 0:
+        return 0.0 if current == 0 else 100.0
+    else:
+        return round(((current - previous) / previous) * 100, 2)
+
+@app.route('/api/admin/recent-activities')
+def api_get_recent_activities():
+    session = request.environ.get('beaker.session')
+    if 'user_id' not in session or not is_admin(session):
+        abort(403, "Unauthorized access.")
+
+    connection = get_db_connection()
+    try:
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Hanya mengambil aktivitas Mengumpulkan Essay
+            sql = """
+                SELECT 
+                    u.username, 
+                    qz.title AS quiz_title, 
+                    'Mengumpulkan Essay' AS activity, 
+                    a.submitted_at AS timestamp, 
+                    CASE 
+                        WHEN er.review_id IS NULL THEN 'Menunggu Review' 
+                        ELSE 'Direview' 
+                    END AS status
+                FROM answers a
+                JOIN users u ON a.user_id = u.user_id
+                JOIN quizzes qz ON a.quiz_id = qz.quiz_id
+                JOIN questions q ON a.question_id = q.question_id
+                LEFT JOIN essay_reviews er ON a.answer_id = er.answer_id
+                WHERE q.question_type = 'essay'
+                ORDER BY timestamp DESC
+                LIMIT 10
+            """
+
+            cursor.execute(sql)
+            activities = cursor.fetchall()
+
+            # Format timestamp ke format ISO
+            for activity in activities:
+                if activity['timestamp']:
+                    activity['timestamp'] = activity['timestamp'].isoformat()
+                else:
+                    activity['timestamp'] = None
+
+            return {'activities': activities}
+    finally:
+        connection.close()
+
+
+
+from decimal import Decimal
+@app.route('/api/admin/user-scores')
+def api_get_user_scores():
+    session = request.environ.get('beaker.session')
+    if 'user_id' not in session or not is_admin(session):
+        abort(403, "Unauthorized access.")
+
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Mengambil skor pengguna
+            sql = """
+                SELECT
+                    h.history_id,
+                    u.username,
+                    q.title AS quiz_title,
+                    h.score AS total_score,
+                    h.mc_score,
+                    h.essay_score,
+                    h.finished_at
+                FROM history h
+                JOIN users u ON h.user_id = u.user_id
+                JOIN quizzes q ON h.quiz_id = q.quiz_id
+                WHERE h.finished_at IS NOT NULL
+                ORDER BY h.finished_at DESC
+                LIMIT 10
+            """
+            cursor.execute(sql)
+            results = cursor.fetchall()
+
+            # Format data untuk JSON dengan mengonversi Decimal ke float
+            user_scores = []
+            for row in results:
+                user_score = {
+                    'username': row['username'],
+                    'quiz_title': row['quiz_title'],
+                    'total_score': float(row['total_score']) if row['total_score'] is not None else None,
+                    'mc_score': float(row['mc_score']) if row['mc_score'] is not None else None,
+                    'essay_score': float(row['essay_score']) if row['essay_score'] is not None else None,
+                    'finished_at': row['finished_at'].isoformat() if row['finished_at'] else None
+                }
+                user_scores.append(user_score)
+
+            return {'user_scores': user_scores}
+    finally:
+        connection.close()
+
 
 # API untuk mendapatkan daftar kuis yang tersedia
 @app.route('/api/user/quizzes')

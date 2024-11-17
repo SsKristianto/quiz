@@ -1,30 +1,278 @@
-<!-- views/user/take_quiz.html -->
 <!DOCTYPE html>
-<html>
+<html lang="id" data-theme="pastel">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mengerjakan Kuis</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <!-- Menggunakan Tailwind CSS dan DaisyUI dari file lokal -->
+    <link rel="stylesheet" href="/static/css/tailwind.css">
+    <!-- Font Awesome  & Lucide Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Tambahkan styling sesuai kebutuhan */
-        .question {
-            margin-bottom: 20px;
+        .question-card {
+            transition: all 0.3s ease;
         }
-        .question p {
-            font-weight: bold;
+        .question-card:hover {
+            transform: translateY(-2px);
+        }
+        .option-hover:hover {
+            background-color: rgba(59, 130, 246, 0.1);
         }
     </style>
 </head>
-<body>
-    % include('partials/navbar.html')
-    <h2>Mengerjakan Kuis</h2>
-    <form id="quizForm">
-        <input type="hidden" name="quiz_id" id="quiz_id" value="{{quiz_id}}">
-        <div id="questionsContainer">
-            <!-- Pertanyaan akan diisi oleh JavaScript -->
+<body class="min-h-screen bg-base-200">
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="flex-1">
+            <a class="btn btn-ghost text-xl">QuizApp</a>
         </div>
-        <button type="submit">Submit</button>
-    </form>
+        <div class="flex-none gap-2">
+            <div class="form-control">
+                <div class="join">
+                    <button class="btn join-item"><i data-lucide="clock"></i> <span id="timer">00:00:00</span></button>
+                    <button class="btn join-item bg-primary text-white">
+                        <i data-lucide="user"></i> Peserta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <script src="/static/js/user/take_quiz.js"></script>
+    <div class="container mx-auto px-4 py-8">
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <div class="flex justify-between items-center">
+                    <h2 class="card-title text-2xl font-bold mb-6">
+                        <i data-lucide="book-open" class="inline-block mr-2"></i>
+                        Quiz
+                    </h2>
+                    <div class="badge badge-primary p-4">
+                        <i data-lucide="help-circle" class="inline-block mr-2"></i>
+                        Total Soal: <span id="questionCount">0</span>
+                    </div>
+                </div>
+
+                <form id="quizForm" class="space-y-6">
+                    <input type="hidden" name="quiz_id" id="quiz_id" value="{{quiz_id}}">
+                    
+                    <div id="questionsContainer" class="space-y-6">
+                        <!-- Questions will be loaded here -->
+                    </div>
+
+                    <div class="flex justify-between mt-8">
+                        <button type="button" class="btn btn-outline" onclick="window.history.back()">
+                            <i data-lucide="arrow-left"></i>
+                            Kembali
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="send"></i>
+                            Submit Jawaban
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress indicator -->
+    <div class="toast toast-top toast-center">
+        <div id="progressAlert" class="alert alert-info hidden">
+            <i data-lucide="loader" class="animate-spin"></i>
+            <span>Memuat pertanyaan...</span>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var quizForm = document.getElementById('quizForm');
+            var quiz_id = document.getElementById('quiz_id').value;
+            var questionsContainer = document.getElementById('questionsContainer');
+            var progressAlert = document.getElementById('progressAlert');
+            var questionCount = document.getElementById('questionCount');
+
+            // Timer functionality
+            let startTime = new Date().getTime();
+            setInterval(updateTimer, 1000);
+
+            function updateTimer() {
+                let now = new Date().getTime();
+                let distance = now - startTime;
+                
+                let hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                let minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                let seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById('timer').innerHTML = 
+                    (hours < 10 ? "0" + hours : hours) + ":" +
+                    (minutes < 10 ? "0" + minutes : minutes) + ":" +
+                    (seconds < 10 ? "0" + seconds : seconds);
+            }
+
+            function loadQuestions() {
+                progressAlert.classList.remove('hidden');
+                
+                fetch(`/api/user/quiz-questions/${quiz_id}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        questionsContainer.innerHTML = '';
+                        questionCount.textContent = data.questions.length;
+                        
+                        data.questions.forEach((question, index) => {
+                            var questionDiv = document.createElement('div');
+                            questionDiv.classList.add('question-card', 'card', 'bg-base-100', 'shadow-md', 'hover:shadow-lg');
+                            
+                            var questionHeader = `
+                                <div class="card-body">
+                                    <div class="flex items-start gap-4">
+                                        <div class="badge badge-lg">${index + 1}</div>
+                                        <div class="flex-1">
+                                            <h3 class="text-lg font-semibold mb-4">${question.question_text}</h3>
+                            `;
+
+                            var questionContent = '';
+                            if (question.question_type === 'multiple_choice') {
+                                var option_texts = question.option_texts ? question.option_texts.split('|') : [];
+                                var option_ids = question.option_ids ? question.option_ids.split(',') : [];
+
+                                questionContent += '<div class="space-y-3">';
+                                option_texts.forEach((text, idx) => {
+                                    var option_id = option_ids[idx];
+                                    questionContent += `
+                                        <div class="form-control option-hover rounded-lg p-3">
+                                            <label class="label cursor-pointer">
+                                                <span class="label-text flex-1">${text}</span>
+                                                <input type="checkbox" class="checkbox checkbox-primary" 
+                                                    name="question_${question.question_id}" 
+                                                    value="${option_id}">
+                                            </label>
+                                        </div>
+                                    `;
+                                });
+                                questionContent += '</div>';
+                            } else if (question.question_type === 'essay') {
+                                questionContent += `
+                                    <div class="form-control">
+                                        <textarea class="textarea textarea-bordered h-24" 
+                                            placeholder="Tulis jawaban Anda di sini..."
+                                            name="question_${question.question_id}" 
+                                            required></textarea>
+                                    </div>
+                                `;
+                            }
+
+                            questionDiv.innerHTML = questionHeader + questionContent + '</div></div></div>';
+                            questionsContainer.appendChild(questionDiv);
+                        });
+
+                        progressAlert.classList.add('hidden');
+                        lucide.createIcons(); // Refresh icons for dynamically added content
+                    })
+                    .catch(error => {
+                        console.error('Error fetching questions:', error);
+                        progressAlert.innerHTML = `
+                            <i data-lucide="alert-triangle"></i>
+                            <span>Gagal memuat pertanyaan</span>
+                        `;
+                        lucide.createIcons();
+                    });
+            }
+
+            quizForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+
+                var answers = [];
+                var questionDivs = questionsContainer.querySelectorAll('.question-card');
+
+                questionDivs.forEach(questionDiv => {
+                    var questionId = questionDiv.querySelector('input, textarea').name.split('_')[1];
+                    var questionType = questionDiv.querySelector('textarea') ? 'essay' : 'multiple_choice';
+
+                    if (questionType === 'multiple_choice') {
+                        var selectedOptions = [];
+                        var inputs = questionDiv.querySelectorAll('input[type="checkbox"]');
+                        inputs.forEach(input => {
+                            if (input.checked) {
+                                selectedOptions.push(input.value);
+                            }
+                        });
+                        answers.push({
+                            question_id: questionId,
+                            question_type: questionType,
+                            selected_options: selectedOptions
+                        });
+                    } else if (questionType === 'essay') {
+                        var answerText = questionDiv.querySelector('textarea').value;
+                        answers.push({
+                            question_id: questionId,
+                            question_type: questionType,
+                            answer_text: answerText
+                        });
+                    }
+                });
+
+                var payload = {
+                    quiz_id: quiz_id,
+                    answers: JSON.stringify(answers)
+                };
+
+                fetch('/api/user/submit-quiz', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(payload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Show success message
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-success';
+                        alert.innerHTML = `
+                            <i data-lucide="check-circle"></i>
+                            <span>Jawaban Anda telah berhasil disimpan!</span>
+                        `;
+                        document.querySelector('.toast').appendChild(alert);
+                        lucide.createIcons();
+
+                        // Redirect after delay
+                        setTimeout(() => {
+                            window.location.href = `/user/dashboard`;
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting quiz:', error);
+                    // Show error message
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    alert.innerHTML = `
+                        <i data-lucide="alert-triangle"></i>
+                        <span>Terjadi kesalahan: ${error.message}</span>
+                    `;
+                    document.querySelector('.toast').appendChild(alert);
+                    lucide.createIcons();
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.classList.remove('loading');
+                    submitBtn.disabled = false;
+                });
+            });
+
+            // Initial load
+            loadQuestions();
+        });
+    </script>
 </body>
 </html>

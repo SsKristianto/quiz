@@ -7,6 +7,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const historyId = urlParts[4];
 
     function loadResults() {
+        const progressAlert = document.getElementById('progressAlert');
+        const totalScoreElem = document.getElementById('total_score');
+        const mcScoreElem = document.getElementById('mc_score');
+        const essayScoreElem = document.getElementById('essay_score');
+        const resultsContainer = document.getElementById('resultsContainer');
+
+        progressAlert.classList.remove('hidden');
+
         fetch(`/api/user/quiz-results/${quizId}/${historyId}`)
             .then(response => {
                 if (!response.ok) {
@@ -15,63 +23,146 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                document.getElementById('mc_score').textContent = data.mc_score.toFixed(2);
-                document.getElementById('essay_score').textContent = data.essay_score.toFixed(2);
-                document.getElementById('total_score').textContent = data.total_score.toFixed(2);
+                console.log('API Response:', data); // Untuk debugging
+
+                // Set skor
+                totalScoreElem.textContent = data.total_score.toFixed(2);
+                mcScoreElem.textContent = data.mc_score.toFixed(2);
+                essayScoreElem.textContent = data.essay_score.toFixed(2);
 
                 // Render hasil kuis
-                const resultsContainer = document.getElementById('resultsContainer');
                 if (!data.user_answers || data.user_answers.length === 0) {
-                    resultsContainer.innerHTML = '<p>Tidak ada jawaban yang ditemukan.</p>';
+                    resultsContainer.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    Tidak ada jawaban yang ditemukan.
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    progressAlert.classList.add('hidden');
                     return;
                 }
 
-                data.user_answers.forEach((answer, index) => {
-                    var resultDiv = document.createElement('div');
-                    resultDiv.classList.add('result');
+                // Bersihkan container sebelum mengisi data baru
+                resultsContainer.innerHTML = '';
 
-                    resultDiv.innerHTML = `<p>${index + 1}. ${answer.question_text}</p>`;
+                data.user_answers.forEach((answer, index) => {
+                    console.log(`Processing answer ${index + 1}:`, answer); // Log setiap jawaban
+
+                    let statusBadge = '';
+                    let scoreDisplay = '';
 
                     if (answer.question_type === 'multiple_choice') {
-                        var selectedOptionIds = answer.selected_option_ids ? answer.selected_option_ids.split(',') : [];
-                        var correctOptionIds = data.correct_options ? data.correct_options[answer.question_id.toString()] : [];
+                        const selectedOptionIds = answer.selected_option_ids ? answer.selected_option_ids.split(',').map(id => parseInt(id)) : [];
+                        const correctOptionIds = data.correct_options ? data.correct_options[answer.question_id.toString()].map(id => parseInt(id)) : [];
 
-                        // Konversi ID ke number untuk perbandingan yang tepat
-                        selectedOptionIds = selectedOptionIds.map(Number);
-                        correctOptionIds = correctOptionIds.map(Number);
+                        const isCorrect = arraysEqual(selectedOptionIds.sort(), correctOptionIds.sort());
 
-                        var isCorrect = false;
-                        if (correctOptionIds) {
-                            isCorrect = setEquals(new Set(selectedOptionIds), new Set(correctOptionIds));
+                        if (isCorrect) {
+                            // Badge Hijau untuk Benar
+                            statusBadge = `
+                                <div class="badge badge-success gap-2 flex items-center text-sm sm:text-base md:text-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span>Benar</span>
+                                </div>
+                            `;
+                        } else {
+                            // Badge Merah untuk Salah
+                            statusBadge = `
+                                <div class="badge badge-error gap-2 flex items-center text-sm sm:text-base md:text-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                    <span>Salah</span>
+                                </div>
+                            `;
                         }
 
-                        resultDiv.innerHTML += `<p>Status: ${isCorrect ? 'Benar' : 'Salah'}</p>`;
+                        scoreDisplay = '-';
                     } else if (answer.question_type === 'essay') {
-                        resultDiv.innerHTML += `<p>Jawaban Anda: ${answer.answer_text}</p>`;
-                        // Tampilkan skor dan feedback jika tersedia
                         if (data.essay_reviews && data.essay_reviews[answer.question_id.toString()]) {
-                            var review = data.essay_reviews[answer.question_id.toString()];
-                            resultDiv.innerHTML += `<p>Skor: ${review.score.toFixed(2)}</p>`;
-                            resultDiv.innerHTML += `<p>Feedback: ${review.feedback}</p>`;
+                            const review = data.essay_reviews[answer.question_id.toString()];
+                            // Badge Hijau untuk Sudah Direview
+                            statusBadge = `
+                                <div class="badge badge-success gap-2 flex items-center text-sm sm:text-base md:text-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span>Sudah Direview</span>
+                                </div>
+                            `;
+                            scoreDisplay = `${review.score.toFixed(2)}%`;
                         } else {
-                            resultDiv.innerHTML += `<p>Status: Belum direview</p>`;
+                            // Badge Kuning untuk Belum Direview
+                            statusBadge = `
+                                <div class="badge badge-warning gap-2 flex items-center text-sm sm:text-base md:text-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                    <span>Belum Direview</span>
+                                </div>
+                            `;
+                            scoreDisplay = '-';
                         }
                     }
 
-                    resultsContainer.appendChild(resultDiv);
+                    let answerText = '';
+                    if (answer.question_type === 'multiple_choice') {
+                        if (answer.selected_option_texts) {
+                            const selectedOptionTexts = answer.selected_option_texts.split('|');
+                            answerText = selectedOptionTexts.join(', ');
+                        } else if (answer.selected_option_ids) {
+                            // Menggunakan selected_option_ids sebagai fallback
+                            const selectedOptionIds = answer.selected_option_ids.split(',').map(id => parseInt(id));
+                            answerText = selectedOptionIds.join(', ');
+                        } else {
+                            answerText = '-';
+                        }
+                    } else if (answer.question_type === 'essay') {
+                        answerText = answer.answer_text ? answer.answer_text : '-';
+                    }
+
+                    const row = `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${answer.question_text}</td>
+                            <td>${answerText}</td>
+                            <td>${statusBadge}</td>
+                            <td>${scoreDisplay}</td>
+                        </tr>
+                    `;
+                    console.log(`Appending row ${index + 1}:`, row); // Log setiap row yang akan ditambahkan
+                    resultsContainer.insertAdjacentHTML('beforeend', row);
                 });
+
+                progressAlert.classList.add('hidden');
             })
             .catch(error => {
                 console.error('Error fetching quiz results:', error);
                 const resultsContainer = document.getElementById('resultsContainer');
-                resultsContainer.innerHTML = '<p>Terjadi kesalahan saat memuat hasil kuis.</p>';
+                resultsContainer.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <div class="alert alert-error">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                Terjadi kesalahan saat memuat hasil kuis.
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                progressAlert.classList.add('hidden');
             });
     }
 
-    function setEquals(a, b) {
-        if (a.size !== b.size) return false;
-        for (var elem of a) {
-            if (!b.has(elem)) return false;
+    function arraysEqual(a, b) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false;
         }
         return true;
     }

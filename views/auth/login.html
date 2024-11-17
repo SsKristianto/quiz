@@ -1,24 +1,103 @@
+<!-- views/auth/login.html -->
 <!DOCTYPE html>
-<html>
+<html lang="id" data-theme="pastel">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/tailwind.css">
+    <!-- Tambahkan library Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Styling tambahan untuk slideshow */
+        .slideshow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .slideshow img {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        .slideshow img.active {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
-    <h2>Login</h2>
-    % if error:
-        <p style="color:red">{{error}}</p>
-    % end
-    <form action="/login" method="post">
-        <label for="username">Username:</label>
-        <input type="text" name="username" id="username" required><br>
+    <!-- Slideshow Background -->
+    <div class="slideshow">
+        <img src="/static/image/auth/image1.jpg" alt="Slideshow Image 1" class="active">
+        <!-- Tambahkan lebih banyak gambar sesuai kebutuhan -->
+    </div>
 
-        <label for="password">Password:</label>
-        <input type="password" name="password" id="password" required><br>
-
-        <button type="submit">Login</button>
-    </form>
-    <p>Belum punya akun? <a href="/register">Daftar di sini</a>.</p>
+    <!-- Konten Login -->
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="card w-full max-w-sm shadow-2xl bg-base-100">
+            <form action="/login" method="post" class="card-body">
+                <h2 class="text-3xl font-bold mb-3 text-center">Selamat Datang di Quizz</h2>
+                <h2 class="text-xl font-semibold mb-4 text-center">Login</h2>
+                % if error:
+                    <div class="alert alert-error flex items-center">
+                        <!-- Ikon Error (X) dari Lucide -->
+                        <i data-lucide="x" class="stroke-current shrink-0 h-6 w-6 mr-2"></i>
+                        <span>{{error}}</span>
+                    </div>
+                % end
+                <div class="form-control">
+                    <label class="label" for="username">
+                        <span class="label-text">Username</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="username" name="username" placeholder="username"
+                               class="input input-bordered w-full pl-10" required>
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <!-- Ikon User dari Lucide -->
+                            <i data-lucide="user" class="h-5 w-5 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-control">
+                    <label class="label" for="password">
+                        <span class="label-text">Password</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" placeholder="password"
+                               class="input input-bordered w-full pl-10 pr-10" required>
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <!-- Ikon Lock dari Lucide -->
+                            <i data-lucide="lock" class="h-5 w-5 text-gray-400"></i>
+                        </div>
+                        <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <!-- Ikon Eye dari Lucide -->
+                            <i data-lucide="eye" id="eyeIcon" class="h-5 w-5 text-gray-400"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-control mt-6">
+                    <button class="btn btn-primary" type="submit">Login</button>
+                </div>
+                <div class="text-center mt-4">
+                    <p>Belum punya akun? <a href="/register" class="btn btn-link">Daftar di sini</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Inisialisasi Lucide setelah konten dimuat -->
     <script src="/static/js/auth.js"></script>
+    <script>
+        // Inisialisasi ikon Lucide
+        lucide.createIcons();
+    </script>
 </body>
 </html>

@@ -1,18 +1,395 @@
-<!-- views/admin/dashboard.html -->
 <!DOCTYPE html>
-<html>
-<head>
+<html lang="id" data-theme="pastel">
+  <head>
+    <meta charset="UTF-8" />
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-</head>
-<body>
-    % include('partials/navbar.html')
-    <h2>Selamat datang di Dashboard Admin</h2>
-    <ul>
-        <li><a href="/admin/users">Manajemen Pengguna</a></li>
-        <li><a href="/admin/quiz-questions">Manajemen Kuis</a></li>
-        <li><a href="/admin/review-essays">Review Jawaban Essay</a></li>
-        <li><a href="/admin/analytics">Analytics</a></li>
-    </ul>
+    <link rel="stylesheet" href="/static/css/tailwind.css" />
+    <!-- Font Awesome & Lucide Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body class="bg-base-200">
+    <div class="drawer lg:drawer-open">
+      <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
+
+      <!-- Sidebar Content -->
+      <div class="drawer-side">
+        <label for="drawer-toggle" class="drawer-overlay"></label>
+        <aside class="bg-base-100 w-80 min-h-screen">
+          <!-- Logo -->
+          <div class="px-6 py-4 border-b border-base-300">
+            <a href="/dashboard" class="btn btn-ghost normal-case text-xl"
+              >QuizMaster</a
+            >
+          </div>
+
+          <!-- Navigation Menu -->
+          <ul class="menu p-4 text-base-content">
+            <li class="menu-title">
+              <span>Menu Utama</span>
+            </li>
+            <li>
+              <a href="/admin/dashboard" class="active">
+                <i class="fas fa-chart-line mr-2"></i>Dashboard
+              </a>
+            </li>
+            <li>
+              <a href="/admin/users">
+                <i class="fas fa-users mr-2"></i>Manajemen Pengguna
+              </a>
+            </li>
+            <li>
+              <a href="/admin/quiz-questions">
+                <i class="fas fa-question-circle mr-2"></i>Manajemen Kuis
+              </a>
+            </li>
+            <li>
+              <a href="/admin/review-essays">
+                <i class="fas fa-file-alt mr-2"></i>Review Essay
+                <span
+                  class="badge badge-sm badge-warning"
+                  id="pendingEssaysBadge"
+                  >0</span
+                >
+              </a>
+            </li>
+          </ul>
+        </aside>
+      </div>
+
+      <!-- Main Content -->
+      <div class="drawer-content flex flex-col">
+        <!-- Top Navigation -->
+        <div class="navbar bg-base-100 shadow-lg">
+          <div class="flex-none lg:hidden">
+            <label for="drawer-toggle" class="btn btn-square btn-ghost">
+              <i class="fas fa-bars"></i>
+            </label>
+          </div>
+          <div class="flex-1 px-4">
+            <h2 class="text-xl font-semibold">Dashboard Admin</h2>
+          </div>
+          <div class="flex-none gap-2">
+            <a href="/logout" class="btn btn-ghost">
+              <i class="fas fa-sign-out-alt mr-2"></i> Keluar
+            </a>
+          </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-6">
+          <!-- Analytics Cards -->
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+            id="analyticsContainer"
+          >
+            <!-- Cards will be dynamically inserted here -->
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="bg-base-100 rounded-lg shadow-lg p-6">
+            <h3 class="text-lg font-semibold mb-4">Aktivitas Terbaru</h3>
+            <div class="overflow-x-auto">
+              <table class="table table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th>Pengguna</th>
+                    <th>Kuis</th>
+                    <th>Aktivitas</th>
+                    <th>Tanggal</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="recentActivityContainer">
+                  <!-- Recent activity rows will be dynamically inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- User Scores -->
+          <div class="bg-base-100 rounded-lg shadow-lg p-6 mt-8">
+            <h3 class="text-lg font-semibold mb-4">Skor Pengguna Terbaru</h3>
+            <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                <tr>
+                    <th>Pengguna</th>
+                    <th>Kuis</th>
+                    <th>Skor Total</th>
+                    <th>Skor Pilihan Ganda</th>
+                    <th>Skor Essay</th>
+                    <th>Tanggal</th>
+                </tr>
+                </thead>
+                <tbody id="userScoresContainer">
+                <!-- User scores rows will be dynamically inserted here -->
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        </main>
+      </div>
+    </div>
+
+    
+  
+
+    <!-- JavaScript Code -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var analyticsContainer = document.getElementById("analyticsContainer");
+    var pendingEssaysBadge = document.getElementById("pendingEssaysBadge");
+    var recentActivityContainer = document.getElementById("recentActivityContainer");
+    var userScoresContainer = document.getElementById("userScoresContainer"); // Deklarasi variabel
+
+    function loadAnalytics() {
+      fetch("/api/admin/analytics")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          var analytics = data.analytics;
+
+          // Update pending essays badge
+          pendingEssaysBadge.textContent = analytics.pending_essays;
+
+          // Create analytics cards with icons
+          analyticsContainer.innerHTML = `
+            <div class="stat bg-base-100 rounded-lg shadow-lg p-6">
+                <div class="stat-figure text-primary">
+                    <i class="fas fa-book-open fa-2x"></i>
+                </div>
+                <div class="stat-title">Total Kuis</div>
+                <div class="stat-value text-primary">${analytics.total_quizzes}</div>
+                <div class="stat-desc">${getChangeIndicator(
+                  analytics.quizzes_change
+                )} ${Math.abs(
+          analytics.quizzes_change
+        )}% dibanding bulan lalu</div>
+            </div>
+            
+            <div class="stat bg-base-100 rounded-lg shadow-lg p-6">
+                <div class="stat-figure text-secondary">
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+                <div class="stat-title">Pengguna Aktif</div>
+                <div class="stat-value text-secondary">${analytics.active_users}</div>
+                <div class="stat-desc">${getChangeIndicator(
+                  analytics.users_change
+                )} ${Math.abs(
+          analytics.users_change
+        )}% dibanding bulan lalu</div>
+            </div>
+            
+            <div class="stat bg-base-100 rounded-lg shadow-lg p-6">
+                <div class="stat-figure text-accent">
+                    <i class="fas fa-star fa-2x"></i>
+                </div>
+                <div class="stat-title">Skor Rata-rata</div>
+                <div class="stat-value text-accent">${analytics.average_score.toFixed(
+                  2
+                )}%</div>
+                <div class="stat-desc">${getChangeIndicator(
+                  analytics.score_change
+                )} ${Math.abs(
+          analytics.score_change
+        )}% dibanding bulan lalu</div>
+            </div>
+            
+            <div class="stat bg-base-100 rounded-lg shadow-lg p-6">
+                <div class="stat-figure text-info">
+                    <i class="fas fa-question-circle fa-2x"></i>
+                </div>
+                <div class="stat-title">Total Pertanyaan</div>
+                <div class="stat-value text-info">${analytics.total_questions}</div>
+                <div class="stat-desc">${getChangeIndicator(
+                  analytics.questions_change
+                )} ${Math.abs(
+          analytics.questions_change
+        )}% dibanding bulan lalu</div>
+            </div>
+            
+            <div class="stat bg-base-100 rounded-lg shadow-lg p-6">
+                <div class="stat-figure text-warning">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+                <div class="stat-title">Essay Belum Direview</div>
+                <div class="stat-value text-warning">${analytics.pending_essays}</div>
+                <div class="stat-desc">Perlu perhatian segera</div>
+            </div>
+          `;
+
+          // Load recent activities
+          loadRecentActivities();
+
+          // Load user scores
+          loadUserScores(); // Panggilan fungsi ditempatkan di sini
+        })
+        .catch((error) => {
+          console.error("Error fetching analytics data:", error);
+          analyticsContainer.innerHTML = `
+            <div class="alert alert-error">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>Terjadi kesalahan saat memuat data analytics.</span>
+            </div>
+          `;
+        });
+    }
+
+    function loadRecentActivities() {
+      fetch("/api/admin/recent-activities")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const activities = data.activities;
+          if (activities.length === 0) {
+            recentActivityContainer.innerHTML = `
+              <tr>
+                <td colspan="5" class="text-center">
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Tidak ada aktivitas terbaru.
+                  </div>
+                </td>
+              </tr>
+            `;
+            return;
+          }
+
+          recentActivityContainer.innerHTML = activities
+            .map(
+              (activity) => `
+                <tr>
+                  <td>${activity.username}</td>
+                  <td>${activity.quiz_title}</td>
+                  <td>${activity.activity}</td>
+                  <td>${formatTimestamp(activity.timestamp)}</td>
+                  <td><span class="badge ${getStatusBadgeClass(
+                    activity.status
+                  )}">${activity.status}</span></td>
+                </tr>
+              `
+            )
+            .join("");
+        })
+        .catch((error) => {
+          console.error("Error fetching recent activities:", error);
+          recentActivityContainer.innerHTML = `
+            <tr>
+              <td colspan="5" class="text-center">
+                <div class="alert alert-error">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>
+                  Terjadi kesalahan saat memuat aktivitas terbaru.
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+    }
+
+    function loadUserScores() {
+      fetch("/api/admin/user-scores")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const userScores = data.user_scores;
+          if (userScores.length === 0) {
+            userScoresContainer.innerHTML = `
+              <tr>
+                <td colspan="6" class="text-center">
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Tidak ada skor pengguna terbaru.
+                  </div>
+                </td>
+              </tr>
+            `;
+            return;
+          }
+
+          userScoresContainer.innerHTML = userScores
+            .map(
+              (score) => `
+                <tr>
+                  <td>${score.username}</td>
+                  <td>${score.quiz_title}</td>
+                  <td class="font-bold">${score.total_score !== null ? score.total_score.toFixed(2) + '%' : '-'}</td>
+                  <td>${score.mc_score !== null ? score.mc_score.toFixed(2) + '%' : '-'}</td>
+                  <td>${score.essay_score !== null ? score.essay_score.toFixed(2) + '%' : '-'}</td>
+                  <td>${formatTimestamp(score.finished_at)}</td>
+                </tr>
+              `
+            )
+            .join("");
+        })
+        .catch((error) => {
+          console.error("Error fetching user scores:", error);
+          userScoresContainer.innerHTML = `
+            <tr>
+              <td colspan="6" class="text-center">
+                <div class="alert alert-error">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>
+                  Terjadi kesalahan saat memuat skor pengguna.
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+    }
+
+    function getStatusBadgeClass(status) {
+      switch (status.toLowerCase()) {
+        case "selesai":
+          return "badge-success";
+        case "menunggu review":
+          return "badge-warning";
+        case "direview":
+          return "badge-info";
+        case "gagal":
+          return "badge-error";
+        default:
+          return "badge-secondary";
+      }
+    }
+
+    function getChangeIndicator(changeValue) {
+      if (isNaN(changeValue) || changeValue === 0) {
+        return "→";
+      } else if (changeValue > 0) {
+        return "↗︎";
+      } else {
+        return "↘︎";
+      }
+    }
+
+    function formatTimestamp(timestamp) {
+      if (!timestamp) return "-";
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return "-";
+      }
+      return date.toLocaleString();
+    }
+
+    // Initial load
+    loadAnalytics();
+
+    // Refresh every 5 minutes
+    setInterval(loadAnalytics, 300000);
+  });
+</script>
 </body>
 </html>

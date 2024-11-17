@@ -1,29 +1,99 @@
 <!-- views/user/results.html -->
 <!DOCTYPE html>
-<html>
+<html lang="id" data-theme="pastel">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hasil Kuis</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <style>
-        /* Tambahkan styling sesuai kebutuhan */
-        .result {
-            margin-bottom: 20px;
-        }
-        .result p {
-            margin: 5px 0;
-        }
-    </style>
+    <!-- Menggunakan Tailwind CSS dan DaisyUI dari file lokal -->
+    <link rel="stylesheet" href="/static/css/tailwind.css">
+    <!-- Tetap menyertakan Lucide Icons dan Font Awesome -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
 </head>
-<body>
+<body class="min-h-screen bg-base-200">
+    <!-- Navbar -->
     % include('partials/navbar.html')
-    <h2>Hasil Kuis</h2>
-    <p>Skor Pilihan Ganda: <span id="mc_score"></span>%</p>
-    <p>Skor Essay: <span id="essay_score"></span>%</p>
-    <p><strong>Skor Total: <span id="total_score"></span>%</strong></p>
-    <div id="resultsContainer">
-        <!-- Hasil akan ditampilkan di sini -->
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header Section -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-primary mb-4">Hasil Kuis Anda</h1>
+            <p class="text-lg">Terima kasih telah mengikuti kuis ini. Berikut adalah hasil Anda:</p>
+        </div>
+
+        <!-- Kembali Button -->
+        <div class="flex justify-end mb-4">
+            <a href="/user/dashboard" class="btn btn-secondary items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Kembali ke Dashboard
+            </a>
+        </div>
+
+        <!-- Total Score Card -->
+        <div class="card bg-base-100 shadow-xl mb-8">
+            <div class="card-body">
+                <h2 class="card-title text-2xl">Skor Total Anda</h2>
+                <div class="flex justify-center items-center mt-4">
+                    <div class="text-center">
+                        <p class="text-5xl font-bold text-primary"><span id="total_score">0</span>%</p>
+                        <p class="text-sm text-gray-500">Skor Total</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Scores Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Skor Pilihan Ganda -->
+            <div class="card bg-base-100 shadow-md">
+                <div class="card-body">
+                    <h3 class="card-title">Skor Pilihan Ganda</h3>
+                    <p class="text-3xl font-semibold text-primary"><span id="mc_score">0</span>%</p>
+                </div>
+            </div>
+            <!-- Skor Essay -->
+            <div class="card bg-base-100 shadow-md">
+                <div class="card-body">
+                    <h3 class="card-title">Skor Essay</h3>
+                    <p class="text-3xl font-semibold text-primary"><span id="essay_score">0</span>%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Results Table -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-4">Riwayat Jawaban</h2>
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Pertanyaan</th>
+                                <th>Jawaban Anda</th>
+                                <th>Status</th>
+                                <th>Skor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsContainer">
+                            <!-- Hasil akan ditampilkan di sini -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- Toast Notifications -->
+    <div class="toast toast-top toast-center">
+        <div id="progressAlert" class="alert alert-info hidden">
+            <i data-lucide="loader" class="animate-spin mr-2"></i>
+            <span>Memuat hasil kuis...</span>
+        </div>
+    </div>
+
+    <!-- JavaScript Code -->
     <script src="/static/js/user/results.js"></script>
 </body>
 </html>
