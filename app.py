@@ -847,18 +847,19 @@ def api_get_recent_activities():
         connection.close()
 
 
-
-from decimal import Decimal
+# Route untuk API Mendapatkan Skor Pengguna dengan Fitur Pencarian
 @app.route('/api/admin/user-scores')
 def api_get_user_scores():
     session = request.environ.get('beaker.session')
     if 'user_id' not in session or not is_admin(session):
         abort(403, "Unauthorized access.")
 
+    search_query = request.query.get('search', '').strip()
+
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            # Mengambil skor pengguna
+            # Dasar Query SQL
             sql = """
                 SELECT
                     h.history_id,
@@ -872,10 +873,18 @@ def api_get_user_scores():
                 JOIN users u ON h.user_id = u.user_id
                 JOIN quizzes q ON h.quiz_id = q.quiz_id
                 WHERE h.finished_at IS NOT NULL
-                ORDER BY h.finished_at DESC
-                LIMIT 10
             """
-            cursor.execute(sql)
+
+            params = []
+
+            # Jika ada parameter pencarian, tambahkan kondisi WHERE
+            if search_query:
+                sql += " AND u.username LIKE %s"
+                params.append(f"%{search_query}%")
+
+            sql += " ORDER BY h.finished_at DESC LIMIT 10"
+
+            cursor.execute(sql, params)
             results = cursor.fetchall()
 
             # Format data untuk JSON dengan mengonversi Decimal ke float
