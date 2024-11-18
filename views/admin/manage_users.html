@@ -3,181 +3,155 @@
 <html lang="id" data-theme="pastel">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Pastikan ini ada -->
     <title>Manajemen Pengguna</title>
     <link rel="stylesheet" href="/static/css/tailwind.css">
+    <link rel="stylesheet" href="/static/css/custom.css"> <!-- Jika menggunakan kelas kustom -->
     <!-- Font Awesome & Lucide Icons -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
 </head>
 <body class="bg-base-200">
-    <div class="drawer lg:drawer-open">
-        <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
-
-        <!-- Sidebar Content -->
-        <div class="drawer-side">
-            <label for="drawer-toggle" class="drawer-overlay"></label>
-            <aside class="bg-base-100 w-80 min-h-screen border-r border-base-300">
-                <!-- Logo -->
-                <div class="px-6 py-4 border-b border-base-300">
-                    <a href="/dashboard" class="btn btn-ghost normal-case text-xl text-primary">
-                        QuizMaster
-                    </a>
-                </div>
-
-                <!-- Navigation Menu -->
-                <ul class="menu p-4 text-base-content">
-                    <li class="menu-title">
-                        <span class="font-semibold">Menu Utama</span>
-                    </li>
-                    <li>
-                        <a href="/admin/dashboard" class="flex items-center gap-3 hover:bg-base-200">
-                            <i class="fas fa-chart-line"></i>Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/admin/users" class="flex items-center gap-3 active bg-primary text-primary-content">
-                            <i class="fas fa-users"></i>Manajemen Pengguna
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/admin/quiz-questions" class="flex items-center gap-3 hover:bg-base-200">
-                            <i class="fas fa-question-circle"></i>Manajemen Kuis
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/admin/review-essays" class="flex items-center gap-3 hover:bg-base-200">
-                            <i class="fas fa-file-alt"></i>Review Essay
-                        </a>
-                    </li>
-                </ul>
-            </aside>
-        </div>
-
-        <!-- Main Content -->
-        <div class="drawer-content flex flex-col min-h-screen">
-            <!-- Top Navigation -->
-            <div class="navbar bg-base-100 shadow-md">
-                <div class="flex-none lg:hidden">
-                    <label for="drawer-toggle" class="btn btn-square btn-ghost">
-                        <i class="fas fa-bars"></i>
-                    </label>
-                </div>
-                <div class="flex-1 px-4">
-                    <h2 class="text-xl font-semibold">Dashboard Admin</h2>
-                </div>
-                <div class="flex-none gap-2">
-                    <div class="dropdown dropdown-end">
-                        <label tabindex="0" class="btn btn-ghost btn-circle avatar">
-                            <div class="w-10 rounded-full">
-                                <img src="/api/placeholder/40/40" alt="avatar" />
-                            </div>
-                        </label>
-                        <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
-                            <li><a href="/profile">Profil</a></li>
-                            <li><a href="/settings">Pengaturan</a></li>
-                            <li><a href="/logout" class="text-error">Keluar</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content Area -->
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl font-bold">Manajemen Pengguna</h1>
-                    <!-- Tombol Tambah Pengguna sebagai Label untuk Modal -->
-                    <label for="user-modal-toggle" class="btn btn-primary">
-                        <i class="fas fa-plus mr-2"></i>Tambah Pengguna
-                    </label>
-                </div>
-
-                <!-- Search and Filter -->
-                <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
-                    <!-- Search Input and Button -->
-                    <div class="flex-1 flex gap-x-[20px]"> <!-- Menggunakan gap-x-[7px] -->
-                        <input type="text" id="searchQuery" placeholder="Cari pengguna..." class="input input-bordered flex-grow" />
-                        <button type="button" id="searchButton" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                    
-                    <!-- Filter Buttons -->
-                    <div class="flex space-x-2">
-                        <button id="filterAll" class="btn btn-outline btn-primary">Semua</button>
-                        <button id="filterAdmin" class="btn btn-outline btn-secondary">Admin</button>
-                        <button id="filterUser" class="btn btn-outline btn-secondary">User</button>
-                    </div>                    
-                </div>
-
-
-                <!-- Users Table -->
-                <div class="overflow-x-auto bg-base-100 rounded-lg shadow">
-                    <table class="table table-zebra w-full">
-                        <thead>
-                            <tr>
-                                <th class="bg-base-200">Username</th>
-                                <th class="bg-base-200">Email</th>
-                                <th class="bg-base-200">Peran</th>
-                                <th class="bg-base-200">Dibuat Pada</th>
-                                <th class="bg-base-200 text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="userTableBody">
-                            <!-- Data akan diisi oleh JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Pagination -->
-                <div class="flex justify-between items-center mt-6">
-                    <div id="paginationInfo" class="text-sm text-base-content/70">
-                        Menampilkan 1-10 dari 100 pengguna
-                    </div>
-                    <div class="join" id="paginationControls">
-                        <!-- Kontrol pagination akan diisi oleh JavaScript -->
-                    </div>
-                </div>
-
-                <!-- Toast Container -->
-                <div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
+    <!-- Navbar Pertama: Logo dan Logout -->
+    <nav class="navbar bg-base-100 shadow-lg px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between w-full">
+            <!-- Logo -->
+            <a href="/dashboard" class="btn btn-ghost normal-case text-xl text-primary">
+                QuizMaster
+            </a>
+            <!-- Logout -->
+            <div class="flex-none">
+                <a href="/logout" class="btn btn-ghost flex items-center text-sm sm:text-base">
+                    <i class="fas fa-sign-out-alt mr-1 sm:mr-2"></i> Keluar
+                </a>
             </div>
         </div>
+    </nav>
+
+    <!-- Navbar Kedua: Menu Navigasi -->
+    <nav class="navbar bg-base-100 shadow-lg px-4 sm:px-6 lg:px-8 sticky top-0 z-50">
+        <div class="flex items-center justify-start w-full">
+            <!-- Navigation Menu -->
+            <div class="flex space-x-4 overflow-x-auto py-2">
+                <a href="/admin/dashboard" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-chart-line mr-2"></i> Dashboard
+                </a>
+                <a href="/admin/users" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-users mr-2"></i> Manajemen Pengguna
+                </a>
+                <a href="/admin/quiz-questions" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-question-circle mr-2"></i> Manajemen Kuis
+                </a>
+                <a href="/admin/review-essays" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-file-alt mr-2"></i> Review Essay
+                </a>
+                <!-- Tambahkan link navigasi lainnya di sini jika diperlukan -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Header: Title and Add Button -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Manajemen Pengguna</h1>
+            <!-- Tombol Tambah Pengguna -->
+            <label for="user-modal-toggle" id="addUserBtn" class="btn btn-primary mt-4 sm:mt-0 flex items-center cursor-pointer">
+                <i class="fas fa-plus mr-2"></i>Tambah Pengguna
+            </label>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <!-- Search Input and Button dengan Gap -->
+            <div class="flex-1 flex space-x-2">
+                <input type="text" id="searchQuery" placeholder="Cari pengguna..." class="input input-bordered flex-grow" />
+                <button type="button" id="searchButton" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            
+            <!-- Filter Buttons -->
+            <div class="flex space-x-2">
+                <button id="filterAll" class="btn btn-outline btn-primary">Semua</button>
+                <button id="filterAdmin" class="btn btn-outline btn-secondary">Admin</button>
+                <button id="filterUser" class="btn btn-outline btn-secondary">User</button>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden flex justify-center items-center mb-4">
+            <i data-lucide="loader" class="animate-spin w-8 h-8 text-primary"></i>
+        </div>
+
+        <!-- Users Table -->
+        <div class="overflow-x-auto bg-base-100 rounded-lg shadow">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr>
+                        <th class="bg-base-200">Username</th>
+                        <th class="bg-base-200">Email</th>
+                        <th class="bg-base-200">Peran</th>
+                        <th class="bg-base-200">Dibuat Pada</th>
+                        <th class="bg-base-200 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <!-- Data akan diisi oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mt-6">
+            <div id="paginationInfo" class="text-sm text-base-content/70">
+                Menampilkan 1-10 dari 100 pengguna
+            </div>
+            <div class="join" id="paginationControls">
+                <!-- Kontrol pagination akan diisi oleh JavaScript -->
+            </div>
+        </div>
+
+        <!-- Toast Container -->
+        <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
     </div>
 
     <!-- Modal Tambah/Edit Pengguna -->
     <input type="checkbox" id="user-modal-toggle" class="modal-toggle" />
     <div class="modal">
-        <div class="modal-box relative">
+        <div class="modal-box relative max-w-lg">
+            <label for="user-modal-toggle" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
             <h3 class="font-bold text-lg mb-4">Tambah/Edit Pengguna</h3>
             <form id="userForm" class="space-y-4">
                 <input type="hidden" name="user_id" id="user_id">
                 
                 <div class="form-control">
-                    <label class="label">
+                    <label class="label" for="username">
                         <span class="label-text">Username</span>
                     </label>
                     <input type="text" name="username" id="username" class="input input-bordered w-full" required>
                 </div>
 
                 <div class="form-control">
-                    <label class="label">
+                    <label class="label" for="email">
                         <span class="label-text">Email</span>
                     </label>
                     <input type="email" name="email" id="email" class="input input-bordered w-full" required>
                 </div>
 
                 <div class="form-control">
-                    <label class="label">
+                    <label class="label" for="role">
                         <span class="label-text">Peran</span>
                     </label>
-                    <select name="role" id="role" class="select select-bordered w-full">
-                        <option value="user">User</option>
+                    <select name="role" id="role" class="select select-bordered w-full" required>
+                        <option value="">Pilih Peran</option>
                         <option value="admin">Admin</option>
+                        <option value="user">User</option>
                     </select>
                 </div>
 
                 <div class="form-control">
-                    <label class="label">
+                    <label class="label" for="password">
                         <span class="label-text">Password</span>
                     </label>
                     <input type="password" name="password" id="password" class="input input-bordered w-full">

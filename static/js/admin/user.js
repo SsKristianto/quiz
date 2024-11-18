@@ -1,16 +1,20 @@
-// static/js/admin/user.js
+// /static/js/admin/user.js
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+    // --- Referensi Elemen ---
     var userTableBody = document.getElementById('userTableBody');
     var userModalToggle = document.getElementById('user-modal-toggle');
     var userForm = document.getElementById('userForm');
     var searchButton = document.getElementById('searchButton');
+    var searchQuery = document.getElementById('searchQuery');
     var filterAll = document.getElementById('filterAll');
     var filterAdmin = document.getElementById('filterAdmin');
     var filterUser = document.getElementById('filterUser');
     var paginationInfo = document.getElementById('paginationInfo');
     var paginationControls = document.getElementById('paginationControls');
     var toastContainer = document.getElementById('toastContainer');
+    var loadingIndicator = document.getElementById('loadingIndicator');
+    var addUserBtn = document.getElementById('addUserBtn'); // Tambahkan referensi ke tombol tambah
 
     var currentPage = 1;
     var totalUsers = 0;
@@ -20,24 +24,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fungsi untuk menampilkan Toast menggunakan DaisyUI
     function showToast(message, type = 'success') {
         var toast = document.createElement('div');
-        toast.className = `alert alert-${type} shadow-lg mb-2`;
+        toast.className = `alert alert-${type} shadow-lg`;
         toast.innerHTML = `
             <div>
                 <span>${message}</span>
             </div>
             <div>
-                <button class="btn btn-sm btn-ghost" onclick="this.parentElement.parentElement.remove()">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                <button class="btn btn-sm btn-ghost">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
         `;
         toastContainer.appendChild(toast);
-        // Hapus toast setelah 3 detik
+
+        // Remove toast ketika tombol close diklik
+        toast.querySelector('button').addEventListener('click', function () {
+            toast.remove();
+        });
+
+        // Auto-remove toast setelah 5 detik
         setTimeout(() => {
             toast.remove();
-        }, 3000);
+        }, 5000);
     }
 
     // Fungsi untuk fetch dan menampilkan pengguna
@@ -47,6 +55,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Debugging: Tampilkan URL di console
         console.log(`Fetching URL: ${url}`);
+
+        // Tampilkan loading
+        loadingIndicator.classList.remove('hidden');
 
         fetch(url)
             .then(response => {
@@ -75,11 +86,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${capitalizeFirstLetter(user.role)}</td>
                             <td>${formatTimestamp(user.created_at)}</td>
                             <td class="text-right">
-                                <button class="editBtn btn btn-sm btn-primary mr-2" data-id="${user.user_id}">
-                                    <i class="fas fa-edit"></i> Edit
+                                <button class="editBtn btn btn-sm btn-primary mr-2 flex items-center" data-id="${user.user_id}">
+                                    <i class="fas fa-edit mr-1"></i>
+                                    <span class="hidden sm:inline">Edit</span>
                                 </button>
-                                <button class="deleteBtn btn btn-sm btn-error" data-id="${user.user_id}">
-                                    <i class="fas fa-trash-alt"></i> Hapus
+                                <button class="deleteBtn btn btn-sm btn-error flex items-center" data-id="${user.user_id}">
+                                    <i class="fas fa-trash-alt mr-1"></i>
+                                    <span class="hidden sm:inline">Hapus</span>
                                 </button>
                             </td>
                         `;
@@ -95,20 +108,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Terjadi kesalahan saat memuat data pengguna.', 'error');
             })
             .finally(() => {
+                // Sembunyikan loading
+                loadingIndicator.classList.add('hidden');
             });
     }
 
     // Fungsi untuk menambahkan event listener pada tombol Edit dan Hapus
     function attachEventListeners() {
         document.querySelectorAll('.editBtn').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 var userId = this.getAttribute('data-id');
                 editUser(userId);
             });
         });
 
         document.querySelectorAll('.deleteBtn').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 var userId = this.getAttribute('data-id');
                 deleteUser(userId);
             });
@@ -116,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Fungsi untuk submit form tambah/edit pengguna
-    userForm.addEventListener('submit', function(event) {
+    userForm.addEventListener('submit', function (event) {
         event.preventDefault();
         var formData = new FormData(userForm);
         var userId = formData.get('user_id');
@@ -137,21 +152,23 @@ document.addEventListener('DOMContentLoaded', function() {
             method: method,
             body: formData
         })
-        .then(response => response.json().then(data => ({status: response.status, body: data})))
-        .then(obj => {
-            if (obj.status === 200 || obj.status === 201) {
-                var action = userId ? 'diupdate' : 'ditambahkan';
-                showToast(`Pengguna berhasil ${action}.`, 'success');
-                userModalToggle.checked = false; // Tutup modal
-                loadUsers(currentPage, searchQuery.value, currentFilter);
-            } else {
-                throw new Error(obj.body.message || 'Terjadi kesalahan.');
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            showToast(`Terjadi kesalahan: ${err.message}`, 'error');
-        });
+            .then(response => response.json().then(data => ({ status: response.status, body: data })))
+            .then(obj => {
+                if (obj.status === 200 || obj.status === 201) {
+                    var action = userId ? 'diupdate' : 'ditambahkan';
+                    showToast(`Pengguna berhasil ${action}.`, 'success');
+                    userModalToggle.checked = false; // Tutup modal
+                    userForm.reset(); // Reset form setelah submit
+                    document.getElementById('password').required = true; // Pastikan password diperlukan lagi
+                    loadUsers(currentPage, searchQuery.value, currentFilter);
+                } else {
+                    throw new Error(obj.body.message || 'Terjadi kesalahan.');
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                showToast(`Terjadi kesalahan: ${err.message}`, 'error');
+            });
     });
 
     // Fungsi untuk edit pengguna
@@ -164,11 +181,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(user => {
-                userForm.reset();
+                userForm.reset(); // Reset form sebelum mengisi data baru
                 document.getElementById('user_id').value = user.user_id;
                 document.getElementById('username').value = user.username;
                 document.getElementById('email').value = user.email;
                 document.getElementById('role').value = user.role.toLowerCase(); // Pastikan sesuai format
+                document.getElementById('password').value = ''; // Kosongkan password saat edit
                 document.getElementById('password').required = false;  // Password tidak wajib saat mengedit
                 userModalToggle.checked = true; // Buka modal
 
@@ -183,24 +201,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fungsi untuk hapus pengguna
     function deleteUser(userId) {
-        showConfirm('Apakah Anda yakin ingin menghapus pengguna ini?', function() {
+        showConfirm('Apakah Anda yakin ingin menghapus pengguna ini?', function () {
             fetch(`/api/admin/users/${userId}`, {
                 method: 'DELETE'
             })
-            .then(response => {
-                if (response.status === 200 || response.status === 204) {
-                    showToast('Pengguna berhasil dihapus.', 'success');
-                    loadUsers(currentPage, searchQuery.value, currentFilter);
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Terjadi kesalahan.');
-                    });
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                showToast(`Terjadi kesalahan: ${err.message}`, 'error');
-            });
+                .then(response => {
+                    if (response.status === 200 || response.status === 204) {
+                        showToast('Pengguna berhasil dihapus.', 'success');
+                        loadUsers(currentPage, searchQuery.value, currentFilter);
+                    } else {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Terjadi kesalahan.');
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    showToast(`Terjadi kesalahan: ${err.message}`, 'error');
+                });
         });
     }
 
@@ -222,39 +240,39 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(confirmModal);
 
         // Tambahkan event listener
-        confirmModal.querySelector('.btn-error').addEventListener('click', function() {
+        confirmModal.querySelector('.btn-error').addEventListener('click', function () {
             confirmModal.remove();
         });
 
-        confirmModal.querySelector('.btn-primary').addEventListener('click', function() {
+        confirmModal.querySelector('.btn-primary').addEventListener('click', function () {
             confirmModal.remove();
             onConfirm();
         });
     }
 
     // Fungsi untuk handle submit search
-    searchButton.addEventListener('click', function() {
+    searchButton.addEventListener('click', function () {
         var query = searchQuery.value.trim();
         console.log(`Search Button Clicked: Query = "${query}", Role = "${currentFilter}"`);
         loadUsers(1, query, currentFilter);
     });
 
     // Fungsi untuk handle filter tombol
-    filterAll.addEventListener('click', function() {
+    filterAll.addEventListener('click', function () {
         currentFilter = '';
         console.log('Filter: Semua');
         loadUsers(1, searchQuery.value, currentFilter);
         setActiveFilterButton(this);
     });
 
-    filterAdmin.addEventListener('click', function() {
+    filterAdmin.addEventListener('click', function () {
         currentFilter = 'admin';
         console.log('Filter: Admin');
         loadUsers(1, searchQuery.value, currentFilter);
         setActiveFilterButton(this);
     });
 
-    filterUser.addEventListener('click', function() {
+    filterUser.addEventListener('click', function () {
         currentFilter = 'user';
         console.log('Filter: User');
         loadUsers(1, searchQuery.value, currentFilter);
@@ -293,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
         prevBtn.className = 'join-item btn btn-sm';
         prevBtn.textContent = '«';
         prevBtn.disabled = currentPage === 1;
-        prevBtn.addEventListener('click', function() {
+        prevBtn.addEventListener('click', function () {
             if (currentPage > 1) {
                 loadUsers(currentPage - 1, searchQuery.value, currentFilter);
             }
@@ -314,8 +332,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var pageBtn = document.createElement('button');
             pageBtn.className = 'join-item btn btn-sm ' + (i === currentPage ? 'btn-active' : 'btn-secondary');
             pageBtn.textContent = i;
-            pageBtn.addEventListener('click', (function(page) {
-                return function() {
+            pageBtn.addEventListener('click', (function (page) {
+                return function () {
                     loadUsers(page, searchQuery.value, currentFilter);
                 }
             })(i));
@@ -327,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
         nextBtn.className = 'join-item btn btn-sm';
         nextBtn.textContent = '»';
         nextBtn.disabled = currentPage === totalPages;
-        nextBtn.addEventListener('click', function() {
+        nextBtn.addEventListener('click', function () {
             if (currentPage < totalPages) {
                 loadUsers(currentPage + 1, searchQuery.value, currentFilter);
             }
@@ -351,6 +369,35 @@ document.addEventListener('DOMContentLoaded', function() {
         return string.charAt(0).toUpperCase() + string.slice(1);
     }
 
-    // Initial load
+    // Highlight active navigation menu based on current URL
+    function highlightActiveMenu() {
+        const currentUrl = window.location.pathname;
+        const navLinks = document.querySelectorAll('nav:nth-of-type(2) a');
+
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === currentUrl) {
+                link.classList.add('bg-primary', 'text-white');
+            }
+        });
+    }
+
+    // Event listener untuk reset formulir saat modal ditutup
+    userModalToggle.addEventListener('change', function () {
+        if (!userModalToggle.checked) {
+            userForm.reset();
+            document.getElementById('user_id').value = '';
+            document.getElementById('password').required = true;
+        }
+    });
+
+    // Event listener untuk reset formulir saat membuka modal tambah
+    addUserBtn.addEventListener('click', function () {
+        userForm.reset(); // Reset seluruh form
+        document.getElementById('user_id').value = ''; // Pastikan user_id kosong
+        document.getElementById('password').required = true; // Password diperlukan saat tambah
+    });
+
+    // --- Initial Load ---
     loadUsers();
+    highlightActiveMenu();
 });

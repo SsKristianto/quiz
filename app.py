@@ -554,8 +554,6 @@ def api_get_answers(quiz_id):
 
 
 # --- Review Jawaban Essay ---
-# Route untuk halaman review essay
-# --- Review Jawaban Essay ---
 @app.route('/admin/review-essays')
 def admin_review_essays():
     session = request.environ.get('beaker.session')

@@ -1,80 +1,124 @@
 <!-- views/admin/review_essays.html -->
 <!DOCTYPE html>
-<html>
-<head>
+<html lang="id" data-theme="pastel">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Review Jawaban Essay</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <style>
-        /* Tambahkan styling sesuai kebutuhan */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #fff;
-            padding: 20px;
-            border: 1px solid #000;
-            z-index: 1000;
-        }
-        .modal.show {
-            display: block;
-        }
-        #modalOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            z-index: 999;
-        }
-        #modalOverlay.show {
-            display: block;
-        }
-    </style>
-</head>
-<body>
-    % include('partials/navbar.html')
-    <h2>Review Jawaban Essay</h2>
+    <link rel="stylesheet" href="/static/css/tailwind.css" />
+    <!-- Font Awesome & Lucide Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+  </head>
+  <body class="bg-base-200">
+    <!-- Navbar Pertama: Logo dan Logout -->
+    <nav class="navbar bg-base-100 shadow-lg px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between w-full">
+            <!-- Logo -->
+            <a href="/dashboard" class="btn btn-ghost normal-case text-xl text-primary">
+                QuizMaster
+            </a>
+            <!-- Logout -->
+            <div class="flex-none">
+                <a href="/logout" class="btn btn-ghost flex items-center text-sm sm:text-base">
+                    <i class="fas fa-sign-out-alt mr-1 sm:mr-2"></i> Keluar
+                </a>
+            </div>
+        </div>
+    </nav>
 
-    <!-- Tabel Jawaban Essay -->
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Pengguna</th>
-                <th>Kuis</th>
-                <th>Pertanyaan</th>
-                <th>Jawaban</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody id="essayAnswersTableBody">
-            <!-- Data akan diisi oleh JavaScript -->
-        </tbody>
-    </table>
+    <!-- Navbar Kedua: Menu Navigasi -->
+    <nav class="navbar bg-base-100 shadow-lg px-4 sm:px-6 lg:px-8 sticky top-0 z-50">
+        <div class="flex items-center justify-start w-full">
+            <!-- Navigation Menu -->
+            <div class="flex space-x-4 overflow-x-auto py-2">
+                <a href="/admin/dashboard" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-chart-line mr-2"></i> Dashboard
+                </a>
+                <a href="/admin/users" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-users mr-2"></i> Manajemen Pengguna
+                </a>
+                <a href="/admin/quiz-questions" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-question-circle mr-2"></i> Manajemen Kuis
+                </a>
+                <a href="/admin/review-essays" class="btn btn-ghost flex items-center text-sm sm:text-base whitespace-nowrap">
+                    <i class="fas fa-file-alt mr-2"></i> Review Essay
+                    <span class="badge badge-sm badge-warning ml-2" id="pendingEssaysBadge">0</span>
+                </a>
+                <!-- Tambahkan link navigasi lainnya di sini jika diperlukan -->
+            </div>
+        </div>
+    </nav>
 
-    <!-- Modal Review -->
-    <div id="modalOverlay"></div>
-    <div id="reviewModal" class="modal">
-        <h3>Review Jawaban Essay</h3>
-        <p><strong>Pengguna:</strong> <span id="modalUsername"></span></p>
-        <p><strong>Kuis:</strong> <span id="modalQuizTitle"></span></p>
-        <p><strong>Pertanyaan:</strong> <span id="modalQuestionText"></span></p>
-        <p><strong>Jawaban:</strong></p>
-        <p id="modalAnswerText"></p>
-        <form id="reviewForm">
-            <input type="hidden" name="answer_id" id="answer_id">
-            <label for="score">Skor:</label>
-            <input type="number" name="score" id="score" step="0.01" min="0" required><br>
-            <label for="feedback">Feedback:</label>
-            <textarea name="feedback" id="feedback"></textarea><br>
-            <button type="submit">Simpan</button>
-            <button type="button" id="cancelReviewBtn">Batal</button>
-        </form>
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-6">
+          <!-- Header -->
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Review Jawaban Essay</h2>
+          </div>
+
+          <!-- Tabel Jawaban Essay -->
+          <div class="overflow-x-auto">
+            <table class="table table-zebra w-full min-w-max">
+              <thead>
+                <tr>
+                  <th>Pengguna</th>
+                  <th>Kuis</th>
+                  <th>Pertanyaan</th>
+                  <th>Jawaban</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="essayAnswersTableBody">
+                <!-- Data akan diisi oleh JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
     </div>
 
+    <!-- Modal Review -->
+    <input type="checkbox" id="reviewModalToggle" class="modal-toggle" />
+    <div class="modal">
+      <div class="modal-box relative max-w-3xl">
+        <label for="reviewModalToggle" class="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
+        <h3 class="text-lg font-bold mb-4">Review Jawaban Essay</h3>
+        <div class="space-y-4">
+          <div>
+            <p><strong>Pengguna:</strong> <span id="modalUsername" class="font-semibold"></span></p>
+            <p><strong>Kuis:</strong> <span id="modalQuizTitle" class="font-semibold"></span></p>
+            <p><strong>Pertanyaan:</strong> <span id="modalQuestionText" class="font-semibold"></span></p>
+            <p><strong>Jawaban:</strong></p>
+            <p id="modalAnswerText" class="p-4 bg-base-100 rounded-md shadow"></p>
+          </div>
+          <form id="reviewForm" class="space-y-4">
+            <input type="hidden" name="answer_id" id="modalAnswerId">
+            <div class="form-control">
+              <label class="label" for="score">
+                <span class="label-text">Skor (0-100)</span>
+              </label>
+              <input type="number" name="score" id="score" class="input input-bordered w-full" step="0.01" min="0" max="100" required>
+            </div>
+            <div class="form-control">
+              <label class="label" for="feedback">
+                <span class="label-text">Feedback</span>
+              </label>
+              <textarea name="feedback" id="feedback" class="textarea textarea-bordered w-full" rows="4"></textarea>
+            </div>
+            <div class="modal-action">
+              <button type="submit" class="btn btn-primary">Simpan</button>
+              <label for="reviewModalToggle" class="btn btn-secondary">Batal</label>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- JavaScript Code -->
     <script src="/static/js/admin/essays_reviews.js"></script>
-</body>
+  </body>
 </html>
