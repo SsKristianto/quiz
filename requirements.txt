@@ -5,3 +5,4 @@ bcrypt
 beaker
 cryptography
 pycryptodome
+jsonify

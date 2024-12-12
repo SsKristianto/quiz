@@ -710,6 +710,14 @@ def admin_analytics():
         return redirect('/login')
     return template('admin/analytics')
 
+def calculate_percentage_change(current, previous):
+    """
+    Calculate percentage change between current and previous values.
+    """
+    if previous == 0:
+        return 0 if current == 0 else 100
+    return round(((current - previous) / previous) * 100, 2)
+
 @app.route('/api/admin/analytics')
 def api_get_analytics():
     session = request.environ.get('beaker.session')
@@ -792,7 +800,20 @@ def api_get_analytics():
             result = cursor.fetchone()
             analytics_data['pending_essays'] = result['pending_essays']
 
-            return {'analytics': analytics_data}
+            # Convert all values to JSON-friendly formats
+            for key, value in list(analytics_data.items()):
+                if isinstance(value, Decimal):
+                    analytics_data[key] = float(value)
+                elif value is None:
+                    analytics_data[key] = 0
+
+            # Set content type to JSON and return
+            response.content_type = 'application/json'
+            return json.dumps({'analytics': analytics_data})
+    except Exception as e:
+        # Log the error and return an error response
+        print(f"Error in analytics endpoint: {str(e)}")
+        abort(500, "Internal Server Error")
     finally:
         connection.close()
 
