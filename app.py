@@ -1127,7 +1127,6 @@ def user_quiz_results(quiz_id, history_id):
         return redirect('/login')
     return template('user/results', quiz_id=quiz_id, history_id=history_id)
 
-# API untuk mendapatkan hasil kuis
 @app.route('/api/user/quiz-results/<quiz_id:int>/<history_id:int>')
 def api_user_get_quiz_results(quiz_id, history_id):
     session = request.environ.get('beaker.session')
@@ -1151,13 +1150,15 @@ def api_user_get_quiz_results(quiz_id, history_id):
             essay_score = float(history['essay_score'])
             total_score = float(history['total_score'])
 
-            # Dapatkan jawaban pengguna untuk history_id tersebut
+            # Dapatkan jawaban pengguna, termasuk teks opsi yang dipilih
             sql = """
             SELECT a.answer_id, q.question_id, q.question_text, q.question_type,
                    a.answer_text,
-                   GROUP_CONCAT(ao.option_id SEPARATOR ',') AS selected_option_ids
+                   GROUP_CONCAT(ao.option_id SEPARATOR ',') AS selected_option_ids,
+                   GROUP_CONCAT(o.option_text SEPARATOR '|') AS selected_option_texts
             FROM answers a
             LEFT JOIN answer_options ao ON a.answer_id = ao.answer_id
+            LEFT JOIN options o ON ao.option_id = o.option_id
             JOIN questions q ON a.question_id = q.question_id
             WHERE a.user_id = %s AND a.quiz_id = %s AND a.history_id = %s
             GROUP BY a.answer_id, q.question_id, q.question_text, q.question_type, a.answer_text
@@ -1177,7 +1178,6 @@ def api_user_get_quiz_results(quiz_id, history_id):
             cursor.execute(sql, (quiz_id,))
             correct_options = cursor.fetchall()
 
-            # Konversi question_id ke string untuk konsistensi kunci di JSON
             correct_options_dict = {str(co['question_id']): co['correct_option_ids'].split(',') for co in correct_options}
 
             # Dapatkan review untuk pertanyaan essay
@@ -1191,7 +1191,6 @@ def api_user_get_quiz_results(quiz_id, history_id):
             cursor.execute(sql, (user_id, quiz_id, history_id))
             essay_reviews = cursor.fetchall()
 
-            # Bangun essay_reviews_dict
             essay_reviews_dict = {}
             for er in essay_reviews:
                 question_id = str(er['question_id'])

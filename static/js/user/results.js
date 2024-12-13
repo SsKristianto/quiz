@@ -1,7 +1,4 @@
-// static/js/user/results.js
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Mendapatkan quizId dan historyId dari URL
+document.addEventListener('DOMContentLoaded', function () {
     const urlParts = window.location.pathname.split('/');
     const quizId = urlParts[3];
     const historyId = urlParts[4];
@@ -23,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                console.log('API Response:', data); // Untuk debugging
+                console.log('API Response:', data); // Debugging
 
                 // Set skor
                 totalScoreElem.textContent = data.total_score.toFixed(2);
@@ -46,12 +43,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                // Bersihkan container sebelum mengisi data baru
+                // Bersihkan container
                 resultsContainer.innerHTML = '';
 
                 data.user_answers.forEach((answer, index) => {
-                    console.log(`Processing answer ${index + 1}:`, answer); // Log setiap jawaban
-
                     let statusBadge = '';
                     let scoreDisplay = '';
 
@@ -62,7 +57,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         const isCorrect = arraysEqual(selectedOptionIds.sort(), correctOptionIds.sort());
 
                         if (isCorrect) {
-                            // Badge Hijau untuk Benar
                             statusBadge = `
                                 <div class="badge badge-success gap-2 flex items-center text-sm sm:text-base md:text-lg">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
@@ -72,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             `;
                         } else {
-                            // Badge Merah untuk Salah
                             statusBadge = `
                                 <div class="badge badge-error gap-2 flex items-center text-sm sm:text-base md:text-lg">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
@@ -87,7 +80,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else if (answer.question_type === 'essay') {
                         if (data.essay_reviews && data.essay_reviews[answer.question_id.toString()]) {
                             const review = data.essay_reviews[answer.question_id.toString()];
-                            // Badge Hijau untuk Sudah Direview
                             statusBadge = `
                                 <div class="badge badge-success gap-2 flex items-center text-sm sm:text-base md:text-lg">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
@@ -98,7 +90,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             `;
                             scoreDisplay = `${review.score.toFixed(2)}%`;
                         } else {
-                            // Badge Kuning untuk Belum Direview
                             statusBadge = `
                                 <div class="badge badge-warning gap-2 flex items-center text-sm sm:text-base md:text-lg">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 stroke-current">
@@ -117,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             const selectedOptionTexts = answer.selected_option_texts.split('|');
                             answerText = selectedOptionTexts.join(', ');
                         } else if (answer.selected_option_ids) {
-                            // Menggunakan selected_option_ids sebagai fallback
                             const selectedOptionIds = answer.selected_option_ids.split(',').map(id => parseInt(id));
                             answerText = selectedOptionIds.join(', ');
                         } else {
@@ -136,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${scoreDisplay}</td>
                         </tr>
                     `;
-                    console.log(`Appending row ${index + 1}:`, row); // Log setiap row yang akan ditambahkan
                     resultsContainer.insertAdjacentHTML('beforeend', row);
                 });
 
