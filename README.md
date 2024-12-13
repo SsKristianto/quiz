@@ -34,12 +34,6 @@ cd quiz
 
 ### 2. Persiapan Lingkungan Backend
 
-- **Membuat Virtual Environment**: Untuk mengisolasi dependensi Python.
-
-  ```bash
-  python -m venv venv
-  ```
-
 - **Mengaktifkan Virtual Environment**:
 
   - **Windows**:
